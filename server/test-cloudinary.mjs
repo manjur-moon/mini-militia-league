@@ -2,6 +2,7 @@ import { inspect } from "node:util";
 import "dotenv/config";
 import process from "node:process";
 import { v2 as cloudinary } from "cloudinary";
+import { Buffer } from "node:buffer";
 
 const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
 const apiKey = process.env.CLOUDINARY_API_KEY;
