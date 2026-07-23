@@ -1,0 +1,172 @@
+openapi: 3.1.0
+info:
+  title: Mini Militia Challenges API
+  version: 12.6.0
+  description: Weekly and monthly challenge contracts backed by verified statistics.
+servers:
+  - url: /api/v1
+paths:
+  /challenges:
+    get:
+      operationId: listPublicChallenges
+      summary: List public challenges
+      parameters:
+        - in: query
+          name: type
+          schema: { type: string, enum: [weekly, monthly] }
+        - in: query
+          name: lifecycle
+          schema: { type: string, enum: [current, history, all], default: current }
+      responses:
+        "200": { description: Challenge list }
+  /challenges/{identifier}:
+    get:
+      operationId: getPublicChallenge
+      summary: Get challenge details and leaderboard
+      parameters:
+        - in: path
+          name: identifier
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Challenge details }
+        "404": { description: Challenge not found }
+  /challenges/players/{playerId}:
+    get:
+      operationId: getPlayerChallenges
+      summary: Get a player's challenge progress and history
+      parameters:
+        - in: path
+          name: playerId
+          required: true
+          schema: { type: string, pattern: "^MM[0-9]{3,}$" }
+        - in: query
+          name: status
+          schema: { type: string, enum: [in_progress, completed, expired] }
+      responses:
+        "200": { description: Player challenge progress }
+  /challenges/admin/manage/list:
+    get:
+      operationId: listAdminChallenges
+      summary: List challenge definitions for administration
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200": { description: Paginated challenge list }
+        "403": { description: Admin role required }
+  /challenges/admin/manage:
+    post:
+      operationId: createChallenge
+      summary: Create a custom challenge
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChallengeInput" }
+      responses:
+        "201": { description: Challenge created }
+        "422": { description: Validation or period-boundary error }
+  /challenges/admin/manage/{challengeId}:
+    patch:
+      operationId: updateChallenge
+      summary: Update an editable challenge
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: challengeId
+          required: true
+          schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" }
+      responses:
+        "200": { description: Challenge updated }
+        "409": { description: Historical challenge is immutable }
+  /challenges/admin/manage/{challengeId}/status:
+    post:
+      operationId: changeChallengeStatus
+      summary: Advance the challenge lifecycle
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: challengeId
+          required: true
+          schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status, reason]
+              properties:
+                status: { type: string, enum: [upcoming, active, completed, archived] }
+                reason: { type: string, minLength: 5, maxLength: 1000 }
+      responses:
+        "200": { description: Status changed }
+        "409": { description: Invalid status transition }
+  /admin/challenges/recalculate:
+    post:
+      operationId: recalculateChallenges
+      summary: Recalculate challenge progress
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                playerId: { type: string, pattern: "^MM[0-9]{3,}$" }
+                date: { type: string, format: date-time }
+                dates:
+                  type: array
+                  maxItems: 12
+                  items: { type: string, format: date-time }
+                reason: { type: string, minLength: 5, maxLength: 1000 }
+      responses:
+        "200": { description: Recalculation summary }
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: better-auth.session_token
+  schemas:
+    ChallengeInput:
+      type: object
+      required:
+        [
+          code,
+          version,
+          name,
+          description,
+          type,
+          startAt,
+          endAt,
+          metric,
+          targetValue,
+          reward,
+          reason,
+        ]
+      properties:
+        code: { type: string, pattern: "^[A-Z0-9_]+$" }
+        version: { type: string }
+        name: { type: string, maxLength: 100 }
+        description: { type: string, maxLength: 500 }
+        icon: { type: string }
+        type: { type: string, enum: [weekly, monthly] }
+        status: { type: string, enum: [draft, upcoming], default: draft }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        metric: { type: string }
+        targetOperator: { type: string, enum: [gte, lte, gt, lt], default: gte }
+        targetValue: { type: number, exclusiveMinimum: 0 }
+        minimumMatches: { type: integer, minimum: 0 }
+        minimumEligibility: { type: [object, "null"] }
+        reward:
+          type: object
+          required: [name]
+          properties:
+            name: { type: string }
+            badgeIcon: { type: string }
+            description: { type: string }
+        reason: { type: string, minLength: 5, maxLength: 1000 }

@@ -1,0 +1,14 @@
+{
+  "name": "@mini-militia/shared",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./constants": "./src/constants/app.constants.js",
+    "./schemas": "./src/schemas/pagination.schema.js"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  }
+}

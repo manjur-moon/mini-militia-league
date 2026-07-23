@@ -1,0 +1,392 @@
+openapi: 3.1.0
+info:
+  title: Mini Militia League - Season System API
+  version: 1.0.0
+  description: Phase 12H season lifecycle, analytics, finalization, and match assignment endpoints.
+servers:
+  - url: http://localhost:5000
+paths:
+  /api/v1/seasons:
+    get:
+      summary: List public seasons
+      operationId: listPublicSeasons
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [upcoming, active, completed, archived]
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
+      responses:
+        "200":
+          $ref: "#/components/responses/SeasonList"
+  /api/v1/seasons/active:
+    get:
+      summary: Get the active season
+      operationId: getActiveSeason
+      responses:
+        "200":
+          description: Active season or null when no season is active.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeasonResponse"
+  /api/v1/seasons/{identifier}:
+    get:
+      summary: Get a public season by slug or MongoDB ID
+      operationId: getSeason
+      parameters:
+        - $ref: "#/components/parameters/SeasonIdentifier"
+      responses:
+        "200":
+          description: Season retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeasonResponse"
+        "404":
+          $ref: "#/components/responses/Error"
+  /api/v1/seasons/{identifier}/statistics:
+    get:
+      summary: Get verified season statistics and MVP
+      operationId: getSeasonStatistics
+      parameters:
+        - $ref: "#/components/parameters/SeasonIdentifier"
+      responses:
+        "200":
+          description: Season analytics retrieved.
+  /api/v1/seasons/{identifier}/leaderboard:
+    get:
+      summary: Get a season leaderboard
+      operationId: getSeasonLeaderboard
+      parameters:
+        - $ref: "#/components/parameters/SeasonIdentifier"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - name: metric
+          in: query
+          schema:
+            type: string
+            default: overall
+            enum:
+              - overall
+              - kills
+              - deaths
+              - kdr
+              - activity
+              - first_places
+              - last_places
+              - win_rate
+              - average_rank
+      responses:
+        "200":
+          description: Season leaderboard retrieved.
+  /api/v1/admin/seasons:
+    get:
+      summary: List all seasons including drafts
+      operationId: listAdminSeasons
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          $ref: "#/components/responses/SeasonList"
+        "403":
+          $ref: "#/components/responses/Error"
+    post:
+      summary: Create a season
+      operationId: createSeason
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSeasonInput"
+      responses:
+        "201":
+          description: Season created.
+        "409":
+          $ref: "#/components/responses/Error"
+  /api/v1/admin/seasons/{seasonId}:
+    patch:
+      summary: Update a draft or upcoming season
+      operationId: updateSeason
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SeasonId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSeasonInput"
+      responses:
+        "200":
+          description: Season updated.
+        "409":
+          $ref: "#/components/responses/Error"
+  /api/v1/admin/seasons/{seasonId}/status:
+    post:
+      summary: Apply a controlled season lifecycle transition
+      operationId: changeSeasonStatus
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SeasonId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [status, reason]
+              properties:
+                status:
+                  type: string
+                  enum: [draft, upcoming, active, completed, archived]
+                reason:
+                  type: string
+                  minLength: 5
+                  maxLength: 1000
+      responses:
+        "200":
+          description: Season lifecycle updated and finalization triggered when completed.
+        "409":
+          $ref: "#/components/responses/Error"
+  /api/v1/admin/seasons/{seasonId}/recalculate:
+    post:
+      summary: Recalculate active analytics or refinalize a completed season
+      operationId: recalculateSeason
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SeasonId"
+      requestBody:
+        $ref: "#/components/requestBodies/AuditReason"
+      responses:
+        "200":
+          description: Season recalculated.
+  /api/v1/admin/seasons/{seasonId}/backfill-matches:
+    post:
+      summary: Assign unlinked matches whose dates fall inside the season
+      operationId: backfillSeasonMatches
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SeasonId"
+      requestBody:
+        $ref: "#/components/requestBodies/AuditReason"
+      responses:
+        "200":
+          description: Match assignments backfilled and affected analytics refreshed.
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: mini_militia.session_token
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    SeasonIdentifier:
+      name: identifier
+      in: path
+      required: true
+      schema:
+        type: string
+        description: Lowercase season slug or MongoDB ObjectId.
+    SeasonId:
+      name: seasonId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "^[a-fA-F0-9]{24}$"
+  requestBodies:
+    AuditReason:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [reason]
+            properties:
+              reason:
+                type: string
+                minLength: 5
+                maxLength: 1000
+  schemas:
+    Season:
+      type: object
+      required: [id, name, slug, startAt, endAt, timezone, status, finalization]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+        timezone:
+          type: string
+        status:
+          type: string
+          enum: [draft, upcoming, active, completed, archived]
+        champion:
+          oneOf:
+            - type: "null"
+            - type: object
+        mvpAward:
+          oneOf:
+            - type: "null"
+            - type: object
+        finalization:
+          type: object
+          properties:
+            status:
+              type: string
+              enum: [not_started, processing, completed, failed]
+            version:
+              type: [string, "null"]
+            startedAt:
+              type: [string, "null"]
+              format: date-time
+            completedAt:
+              type: [string, "null"]
+              format: date-time
+            errorCode:
+              type: [string, "null"]
+    SeasonResponse:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          const: true
+        message:
+          type: string
+        data:
+          oneOf:
+            - $ref: "#/components/schemas/Season"
+            - type: "null"
+    CreateSeasonInput:
+      type: object
+      additionalProperties: false
+      required: [name, slug, description, startAt, endAt, timezone, status, reason]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        slug:
+          type: string
+          pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        description:
+          type: string
+          maxLength: 1000
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+        timezone:
+          type: string
+        status:
+          type: string
+          enum: [draft, upcoming]
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 1000
+    UpdateSeasonInput:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+        timezone:
+          type: string
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 1000
+    ErrorResponse:
+      type: object
+      required: [success, message, errors]
+      properties:
+        success:
+          type: boolean
+          const: false
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+  responses:
+    SeasonList:
+      description: Paginated season list.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [success, message, data, pagination]
+            properties:
+              success:
+                type: boolean
+              message:
+                type: string
+              data:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Season"
+              pagination:
+                type: object
+    Error:
+      description: Validation, authorization, conflict, or not-found error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"

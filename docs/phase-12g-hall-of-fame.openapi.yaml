@@ -1,0 +1,262 @@
+openapi: 3.1.0
+info:
+  title: Mini Militia Hall of Fame API
+  version: 1.0.0
+  description: Public historical record access and admin-only recalculation.
+servers:
+  - url: http://localhost:5000
+paths:
+  /api/v1/hall-of-fame:
+    get:
+      operationId: listHallOfFame
+      summary: List current or historical Hall of Fame records
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - in: query
+          name: category
+          schema:
+            $ref: "#/components/schemas/Category"
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [current, historical, all]
+            default: current
+        - in: query
+          name: seasonId
+          schema:
+            type: string
+            pattern: "^[a-fA-F0-9]{24}$"
+      responses:
+        "200":
+          description: Hall of Fame records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HallOfFameListResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /api/v1/hall-of-fame/{category}:
+    get:
+      operationId: getHallOfFameCategory
+      summary: List records for one category
+      parameters:
+        - in: path
+          name: category
+          required: true
+          schema:
+            $ref: "#/components/schemas/Category"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [current, historical, all]
+            default: current
+        - in: query
+          name: seasonId
+          schema:
+            type: string
+            pattern: "^[a-fA-F0-9]{24}$"
+      responses:
+        "200":
+          description: Category records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HallOfFameListResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /api/v1/hall-of-fame/players/{playerId}:
+    get:
+      operationId: getPlayerHallOfFameHistory
+      summary: Get current and historical records held by a player
+      parameters:
+        - in: path
+          name: playerId
+          required: true
+          schema:
+            type: string
+            pattern: "^MM[0-9]{3,}$"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - in: query
+          name: category
+          schema:
+            $ref: "#/components/schemas/Category"
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [current, historical, all]
+            default: all
+      responses:
+        "200":
+          description: Player record history
+        "404":
+          description: Player not found
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /api/v1/admin/hall-of-fame/recalculate:
+    post:
+      operationId: recalculateHallOfFame
+      summary: Recalculate one or all Hall of Fame categories
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                category:
+                  $ref: "#/components/schemas/Category"
+                seasonId:
+                  type: string
+                  pattern: "^[a-fA-F0-9]{24}$"
+                reason:
+                  type: string
+                  minLength: 5
+                  maxLength: 1000
+      responses:
+        "200":
+          description: Recalculation result
+        "401":
+          description: Authentication required
+        "403":
+          description: Admin role required
+        "409":
+          description: Season is not completed
+        "422":
+          $ref: "#/components/responses/ValidationError"
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: mini_militia.session_token
+  parameters:
+    Page:
+      in: query
+      name: page
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Limit:
+      in: query
+      name: limit
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+  schemas:
+    Category:
+      type: string
+      enum:
+        - season_champion
+        - all_time_legend
+        - most_kills
+        - most_mvp_awards
+        - best_kdr
+        - longest_winning_streak
+    HallOfFameRecord:
+      type: object
+      required:
+        - id
+        - category
+        - player
+        - periodKey
+        - recordValue
+        - unit
+        - awardDate
+        - sourceVersion
+        - sourceDataHash
+        - status
+      properties:
+        id:
+          type: string
+        category:
+          $ref: "#/components/schemas/Category"
+        player:
+          type: object
+          required: [playerId, name, status]
+          properties:
+            playerId:
+              type: string
+            name:
+              type: string
+            photoUrl:
+              type: [string, "null"]
+            status:
+              type: string
+              enum: [active, inactive]
+        season:
+          type: [object, "null"]
+        periodKey:
+          type: string
+        recordValue:
+          type: number
+        unit:
+          type: string
+        awardDate:
+          type: string
+          format: date-time
+        sourceVersion:
+          type: string
+        sourceDataHash:
+          type: string
+        status:
+          type: string
+          enum: [current, historical]
+        evidence:
+          type: object
+        criteria:
+          type: object
+    HallOfFameListResponse:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          const: true
+        message:
+          type: string
+        data:
+          type: object
+          required: [definitions, items, pagination]
+          properties:
+            definitions:
+              type: array
+              items:
+                type: object
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/HallOfFameRecord"
+            pagination:
+              type: object
+  responses:
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [success, message, errors]
+            properties:
+              success:
+                type: boolean
+                const: false
+              message:
+                type: string
+              errors:
+                type: array
+                items:
+                  type: object

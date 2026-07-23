@@ -1,0 +1,107 @@
+openapi: 3.1.0
+info:
+  title: Mini Militia League Achievement API
+  version: 1.0.0
+paths:
+  /api/v1/achievements:
+    get:
+      summary: List active public achievement definitions
+      tags: [Achievements]
+      parameters:
+        - in: query
+          name: category
+          schema: { type: string }
+      responses:
+        "200": { description: Achievement definitions retrieved }
+  /api/v1/achievements/definitions/{code}:
+    get:
+      summary: Get one active achievement and recent unlocks
+      tags: [Achievements]
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema: { type: string, pattern: "^[A-Z0-9_]+$" }
+      responses:
+        "200": { description: Achievement details retrieved }
+        "404": { description: Achievement not found }
+  /api/v1/achievements/players/{playerId}:
+    get:
+      summary: Get player achievement progress
+      tags: [Achievements]
+      parameters:
+        - in: path
+          name: playerId
+          required: true
+          schema: { type: string, pattern: "^MM[0-9]{3,}$" }
+        - in: query
+          name: unlocked
+          schema: { type: boolean }
+        - in: query
+          name: category
+          schema: { type: string }
+      responses:
+        "200": { description: Player achievement progress retrieved }
+        "404": { description: Player not found }
+  /api/v1/achievements/admin/definitions:
+    get:
+      summary: List all achievement versions
+      tags: [Achievements]
+      security: [{ cookieSession: [] }]
+      responses:
+        "200": { description: Achievement versions retrieved }
+    post:
+      summary: Create an inactive achievement definition
+      tags: [Achievements]
+      security: [{ cookieSession: [] }]
+      responses:
+        "201": { description: Achievement definition created }
+  /api/v1/achievements/admin/definitions/{achievementId}/revisions:
+    post:
+      summary: Create an immutable achievement revision
+      tags: [Achievements]
+      security: [{ cookieSession: [] }]
+      parameters:
+        - in: path
+          name: achievementId
+          required: true
+          schema: { type: string }
+      responses:
+        "201": { description: Achievement revision created }
+  /api/v1/achievements/admin/definitions/{achievementId}/activate:
+    post:
+      summary: Activate one achievement version
+      tags: [Achievements]
+      security: [{ cookieSession: [] }]
+      parameters:
+        - in: path
+          name: achievementId
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Achievement activated }
+  /api/v1/achievements/admin/definitions/{achievementId}/deactivate:
+    post:
+      summary: Deactivate one achievement version
+      tags: [Achievements]
+      security: [{ cookieSession: [] }]
+      parameters:
+        - in: path
+          name: achievementId
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Achievement deactivated }
+  /api/v1/admin/achievements/recalculate:
+    post:
+      summary: Recalculate achievement progress and unlocks
+      tags: [Achievements]
+      security: [{ cookieSession: [] }]
+      responses:
+        "200": { description: Achievement evaluation completed }
+components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: better-auth.session_token

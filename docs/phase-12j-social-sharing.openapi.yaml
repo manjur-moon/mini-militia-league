@@ -1,0 +1,211 @@
+openapi: 3.1.0
+info:
+  title: Mini Militia League Social Sharing API
+  version: 12.10.0
+  description: Public social metadata and artwork endpoints generated only from public verified league data.
+servers:
+  - url: https://api.example.com
+paths:
+  /api/v1/share/players/{playerId}:
+    get:
+      operationId: getPlayerProfileShareMetadata
+      summary: Get public player-profile share metadata
+      parameters:
+        - $ref: "#/components/parameters/PlayerId"
+      responses:
+        "200":
+          $ref: "#/components/responses/ShareMetadataResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/share/players/{playerId}/image.png:
+    get:
+      operationId: getPlayerProfileShareImage
+      summary: Render a 1200x630 public player-profile PNG
+      parameters:
+        - $ref: "#/components/parameters/PlayerId"
+      responses:
+        "200":
+          description: PNG social artwork
+          content:
+            image/png:
+              schema:
+                type: string
+                contentEncoding: binary
+  /api/v1/share/players/{playerId}/achievements/{achievementCode}:
+    get:
+      operationId: getAchievementShareMetadata
+      summary: Get metadata for a verified unlocked achievement
+      parameters:
+        - $ref: "#/components/parameters/PlayerId"
+        - $ref: "#/components/parameters/AchievementCode"
+      responses:
+        "200":
+          $ref: "#/components/responses/ShareMetadataResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/share/players/{playerId}/achievements/{achievementCode}/image.png:
+    get:
+      operationId: getAchievementShareImage
+      summary: Render a 1200x630 achievement PNG
+      parameters:
+        - $ref: "#/components/parameters/PlayerId"
+        - $ref: "#/components/parameters/AchievementCode"
+      responses:
+        "200":
+          description: PNG social artwork
+          content:
+            image/png:
+              schema:
+                type: string
+                contentEncoding: binary
+  /api/v1/share/mvp/weekly:
+    get:
+      operationId: getWeeklyMvpShareMetadata
+      summary: Get current or selected weekly MVP share metadata
+      parameters:
+        - $ref: "#/components/parameters/OptionalDate"
+      responses:
+        "200":
+          $ref: "#/components/responses/ShareMetadataResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/share/mvp/weekly/image.png:
+    get:
+      operationId: getWeeklyMvpShareImage
+      summary: Render a 1200x630 weekly MVP PNG
+      parameters:
+        - $ref: "#/components/parameters/OptionalDate"
+      responses:
+        "200":
+          description: PNG social artwork
+          content:
+            image/png:
+              schema:
+                type: string
+                contentEncoding: binary
+  /share/players/{playerId}/profile:
+    get:
+      operationId: getPlayerProfileOpenGraphPage
+      summary: Open Graph landing page for a public player profile
+      parameters:
+        - $ref: "#/components/parameters/PlayerId"
+      responses:
+        "200":
+          description: HTML document containing Open Graph and Twitter metadata
+          content:
+            text/html:
+              schema:
+                type: string
+  /share/players/{playerId}/achievements/{achievementCode}:
+    get:
+      operationId: getAchievementOpenGraphPage
+      summary: Open Graph landing page for an unlocked achievement
+      parameters:
+        - $ref: "#/components/parameters/PlayerId"
+        - $ref: "#/components/parameters/AchievementCode"
+      responses:
+        "200":
+          description: HTML document containing Open Graph and Twitter metadata
+          content:
+            text/html:
+              schema:
+                type: string
+  /share/mvp/weekly:
+    get:
+      operationId: getWeeklyMvpOpenGraphPage
+      summary: Open Graph landing page for a weekly MVP award
+      parameters:
+        - $ref: "#/components/parameters/OptionalDate"
+      responses:
+        "200":
+          description: HTML document containing Open Graph and Twitter metadata
+          content:
+            text/html:
+              schema:
+                type: string
+components:
+  parameters:
+    PlayerId:
+      name: playerId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "^MM[0-9]{3,}$"
+    AchievementCode:
+      name: achievementCode
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "^[A-Z0-9_]{2,80}$"
+    OptionalDate:
+      name: date
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date-time
+  schemas:
+    ApiError:
+      type: object
+      required: [success, message, errors]
+      properties:
+        success:
+          type: boolean
+          const: false
+        message:
+          type: string
+        errors:
+          type: array
+          items: {}
+    ShareUrls:
+      type: object
+      required: [canonicalUrl, shareUrl, imageUrl]
+      properties:
+        canonicalUrl:
+          type: string
+          format: uri
+        shareUrl:
+          type: string
+          format: uri
+        imageUrl:
+          type: string
+          format: uri
+    ShareMetadata:
+      type: object
+      required: [type, title, description, urls]
+      properties:
+        type:
+          type: string
+          enum: [player_profile, achievement, weekly_mvp]
+        title:
+          type: string
+        description:
+          type: string
+        urls:
+          $ref: "#/components/schemas/ShareUrls"
+    SuccessEnvelope:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          const: true
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/ShareMetadata"
+  responses:
+    ShareMetadataResponse:
+      description: Public share metadata
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SuccessEnvelope"
+    NotFound:
+      description: Public share entity was not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"

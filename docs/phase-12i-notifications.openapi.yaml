@@ -1,0 +1,202 @@
+openapi: 3.1.0
+info:
+  title: Mini Militia Notification API
+  version: 12.9.0
+  description: Phase 12I notification inbox and admin delivery management.
+servers:
+  - url: /api/v1
+security:
+  - cookieSession: []
+paths:
+  /notifications:
+    get:
+      operationId: listMyNotifications
+      summary: List notifications owned by the current user
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - name: type
+          in: query
+          schema:
+            $ref: "#/components/schemas/NotificationType"
+        - name: readStatus
+          in: query
+          schema:
+            type: string
+            enum: [all, read, unread]
+            default: all
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        "200":
+          description: Paginated notification list
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /notifications/unread-count:
+    get:
+      operationId: getMyUnreadNotificationCount
+      summary: Get unread notification count
+      responses:
+        "200":
+          description: Current unread count
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /notifications/{notificationId}/read:
+    patch:
+      operationId: markMyNotificationRead
+      summary: Mark an owned notification as read
+      parameters:
+        - $ref: "#/components/parameters/NotificationId"
+      responses:
+        "200":
+          description: Updated notification
+        "404":
+          description: Notification not found for the current user
+  /notifications/read-all:
+    patch:
+      operationId: markAllMyNotificationsRead
+      summary: Mark every unread notification owned by the current user as read
+      responses:
+        "200":
+          description: Number of updated notifications
+  /admin/notifications:
+    get:
+      operationId: listAdminNotifications
+      summary: List notification delivery records
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - name: userId
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            $ref: "#/components/schemas/NotificationType"
+        - name: readStatus
+          in: query
+          schema:
+            type: string
+            enum: [all, read, unread]
+        - name: source
+          in: query
+          schema:
+            type: string
+            enum: [system, admin]
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 150
+      responses:
+        "200":
+          description: Paginated admin notification log
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: createAdminNotification
+      summary: Send an auditable notification to one active user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [userIdentifier, title, message, reason]
+              properties:
+                userIdentifier:
+                  type: string
+                  description: Better Auth user ID or exact email
+                title:
+                  type: string
+                  minLength: 2
+                  maxLength: 150
+                message:
+                  type: string
+                  minLength: 2
+                  maxLength: 1000
+                actionUrl:
+                  type: [string, "null"]
+                  pattern: "^/(?!/)"
+                relatedEntity:
+                  oneOf:
+                    - $ref: "#/components/schemas/RelatedEntity"
+                    - type: "null"
+                reason:
+                  type: string
+                  minLength: 5
+                  maxLength: 1000
+      responses:
+        "201":
+          description: Notification created
+        "404":
+          description: Target user not found
+        "409":
+          description: Target user is inactive
+        "403":
+          $ref: "#/components/responses/Forbidden"
+components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: mini_militia.session_token
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    NotificationId:
+      name: notificationId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "^[a-fA-F0-9]{24}$"
+  schemas:
+    NotificationType:
+      type: string
+      enum:
+        - achievement_unlocked
+        - mvp_award
+        - challenge_completed
+        - title_earned
+        - match_verified
+        - match_rejected
+        - player_account_linked
+        - season_started
+        - season_completed
+        - system_announcement
+    RelatedEntity:
+      type: object
+      additionalProperties: false
+      required: [entityType, entityId]
+      properties:
+        entityType:
+          type: string
+          maxLength: 100
+        entityId:
+          type: string
+          maxLength: 128
+  responses:
+    Unauthorized:
+      description: Authentication required
+    Forbidden:
+      description: Admin role required

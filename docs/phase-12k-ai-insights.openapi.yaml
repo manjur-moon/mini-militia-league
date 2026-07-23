@@ -1,0 +1,445 @@
+openapi: 3.1.0
+info:
+  title: Mini Militia League AI Summaries and Insights API
+  version: 12.11.0
+  description: >-
+    AI-assisted narratives generated only from verified structured league data. External
+    generation is optional; deterministic statistics-based output is always available.
+servers:
+  - url: https://api.example.com
+paths:
+  /api/v1/ai/status:
+    get:
+      operationId: getAIInsightStatus
+      summary: Get the configured AI provider and fallback status
+      tags: [AI Insights]
+      responses:
+        "200":
+          description: AI insight configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigurationEnvelope"
+  /api/v1/ai/summaries/{periodType}:
+    get:
+      operationId: getAIPeriodSummary
+      summary: Generate or retrieve a cached weekly or monthly summary
+      tags: [AI Insights]
+      parameters:
+        - $ref: "#/components/parameters/PeriodType"
+        - $ref: "#/components/parameters/OptionalDate"
+      responses:
+        "200":
+          $ref: "#/components/responses/AISummaryResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /api/v1/ai/highlights/{periodType}:
+    get:
+      operationId: getAIPeriodHighlight
+      summary: Generate or retrieve a cached public highlight
+      tags: [AI Insights]
+      parameters:
+        - $ref: "#/components/parameters/PeriodType"
+        - $ref: "#/components/parameters/OptionalDate"
+      responses:
+        "200":
+          $ref: "#/components/responses/AISummaryResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /api/v1/ai/players/{playerId}:
+    get:
+      operationId: getAIPlayerInsight
+      summary: Generate or retrieve verified-data player analysis and suggestions
+      tags: [AI Insights]
+      parameters:
+        - $ref: "#/components/parameters/PlayerId"
+        - name: range
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [7d, 30d]
+            default: 30d
+      responses:
+        "200":
+          $ref: "#/components/responses/AISummaryResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /api/v1/ai/matches/{matchId}:
+    get:
+      operationId: getAIMatchInsight
+      summary: Generate or retrieve a narrative for a verified match
+      tags: [AI Insights]
+      parameters:
+        - $ref: "#/components/parameters/MatchId"
+      responses:
+        "200":
+          $ref: "#/components/responses/AISummaryResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /api/v1/admin/ai/summaries:
+    get:
+      operationId: listAdminAISummaries
+      summary: List AI generation history
+      tags: [Admin AI Insights]
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - name: type
+          in: query
+          schema:
+            $ref: "#/components/schemas/AISummaryType"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [generated, fallback_generated, failed]
+        - name: provider
+          in: query
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 50
+        - name: playerId
+          in: query
+          schema:
+            type: string
+            pattern: "^MM[0-9]{3,}$"
+      responses:
+        "200":
+          description: Paginated AI generation history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedAISummaryEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/v1/admin/ai/regenerate:
+    post:
+      operationId: regenerateAdminAIInsight
+      summary: Explicitly regenerate a selected AI insight
+      tags: [Admin AI Insights]
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegenerateAIInsightInput"
+      responses:
+        "200":
+          $ref: "#/components/responses/AISummaryResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: better-auth.session_token
+  parameters:
+    PeriodType:
+      name: periodType
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [weekly, monthly]
+    OptionalDate:
+      name: date
+      in: query
+      required: false
+      description: ISO date used to select the league-timezone period.
+      schema:
+        type: string
+        format: date-time
+    PlayerId:
+      name: playerId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "^MM[0-9]{3,}$"
+    MatchId:
+      name: matchId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "^[a-fA-F0-9]{24}$"
+    Page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+  schemas:
+    AISummaryType:
+      type: string
+      enum: [weekly, monthly, player_performance, match_insight, highlight]
+    TokenUsage:
+      type: object
+      required: [inputTokens, outputTokens, totalTokens]
+      properties:
+        inputTokens:
+          type: integer
+          minimum: 0
+        outputTokens:
+          type: integer
+          minimum: 0
+        totalTokens:
+          type: integer
+          minimum: 0
+    PeriodDescriptor:
+      type: object
+      required: [key, startAt, endAt, timezone]
+      properties:
+        key:
+          type: string
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+        timezone:
+          type: string
+    AISummary:
+      type: object
+      required:
+        - id
+        - type
+        - period
+        - status
+        - provider
+        - isFallback
+        - content
+        - structuredContent
+        - promptVersion
+        - generatedAt
+        - sourceDataHash
+        - usage
+        - cacheHit
+        - label
+      properties:
+        id:
+          type: string
+        type:
+          $ref: "#/components/schemas/AISummaryType"
+        period:
+          $ref: "#/components/schemas/PeriodDescriptor"
+        playerId:
+          type: [string, "null"]
+        matchId:
+          type: [string, "null"]
+        seasonId:
+          type: [string, "null"]
+        status:
+          type: string
+          enum: [generated, fallback_generated]
+        provider:
+          type: string
+          enum: [openai, deterministic]
+        model:
+          type: [string, "null"]
+        isFallback:
+          type: boolean
+        content:
+          type: string
+        structuredContent:
+          type: object
+          additionalProperties: true
+        promptVersion:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        validationWarnings:
+          type: array
+          items:
+            type: string
+        sourceDataHash:
+          type: string
+        usage:
+          $ref: "#/components/schemas/TokenUsage"
+        cacheHit:
+          type: boolean
+        label:
+          type: string
+          const: AI-generated analysis
+    AIConfiguration:
+      type: object
+      required:
+        - provider
+        - model
+        - externalGenerationConfigured
+        - deterministicFallbackEnabled
+        - promptVersion
+      properties:
+        provider:
+          type: string
+          enum: [openai, disabled]
+        model:
+          type: [string, "null"]
+        externalGenerationConfigured:
+          type: boolean
+        deterministicFallbackEnabled:
+          type: boolean
+        promptVersion:
+          type: string
+    RegenerateAIInsightInput:
+      type: object
+      additionalProperties: false
+      required: [type, reason]
+      properties:
+        type:
+          $ref: "#/components/schemas/AISummaryType"
+        periodType:
+          type: string
+          enum: [weekly, monthly]
+          description: Required when type is highlight.
+        date:
+          type: string
+          format: date-time
+        playerId:
+          type: string
+          pattern: "^MM[0-9]{3,}$"
+          description: Required when type is player_performance.
+        matchId:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+          description: Required when type is match_insight.
+        range:
+          type: string
+          enum: [7d, 30d]
+          default: 30d
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 1000
+    Pagination:
+      type: object
+      required:
+        - page
+        - limit
+        - totalItems
+        - totalPages
+        - hasNextPage
+        - hasPreviousPage
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalItems:
+          type: integer
+        totalPages:
+          type: integer
+        hasNextPage:
+          type: boolean
+        hasPreviousPage:
+          type: boolean
+    APIError:
+      type: object
+      required: [success, message, errors]
+      properties:
+        success:
+          type: boolean
+          const: false
+        message:
+          type: string
+        errors:
+          type: array
+          items: {}
+    AISummaryEnvelope:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          const: true
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/AISummary"
+    ConfigurationEnvelope:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          const: true
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/AIConfiguration"
+    PaginatedAISummaryEnvelope:
+      type: object
+      required: [success, message, data, pagination]
+      properties:
+        success:
+          type: boolean
+          const: true
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AISummary"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+  responses:
+    AISummaryResponse:
+      description: AI insight generated from or retrieved for verified structured data
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AISummaryEnvelope"
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/APIError"
+    NotFound:
+      description: Requested verified player or match was not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/APIError"
+    Unauthorized:
+      description: Authentication is required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/APIError"
+    Forbidden:
+      description: Admin role is required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/APIError"

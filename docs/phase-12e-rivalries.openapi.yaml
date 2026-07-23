@@ -1,0 +1,127 @@
+openapi: 3.1.0
+info:
+  title: Mini Militia League Rivalry API
+  version: 1.0.0
+paths:
+  /api/v1/rivalries/rival-of-week:
+    get:
+      operationId: getRivalOfWeek
+      tags: [Rivalries]
+      parameters:
+        - in: query
+          name: date
+          schema: { type: string, format: date-time }
+      responses:
+        "200": { description: Rival of the week retrieved }
+  /api/v1/rivalries/players/{playerId}:
+    get:
+      operationId: listPlayerRivalries
+      tags: [Rivalries]
+      parameters:
+        - $ref: "#/components/parameters/PlayerId"
+        - $ref: "#/components/parameters/PeriodType"
+        - $ref: "#/components/parameters/Date"
+        - $ref: "#/components/parameters/SeasonId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200": { description: Paginated player rivalries retrieved }
+        "404": { description: Player not found }
+  /api/v1/rivalries/players/{playerId}/opponents/{opponentId}:
+    get:
+      operationId: getRivalryComparison
+      tags: [Rivalries]
+      parameters:
+        - $ref: "#/components/parameters/PlayerId"
+        - $ref: "#/components/parameters/OpponentId"
+        - $ref: "#/components/parameters/PeriodType"
+        - $ref: "#/components/parameters/Date"
+        - $ref: "#/components/parameters/SeasonId"
+      responses:
+        "200": { description: Rivalry comparison retrieved }
+        "404": { description: Rivalry not found }
+        "422": { description: Invalid self-comparison or period }
+  /api/v1/rivalries/players/{playerId}/opponents/{opponentId}/matches:
+    get:
+      operationId: getRivalryMatches
+      tags: [Rivalries]
+      parameters:
+        - $ref: "#/components/parameters/PlayerId"
+        - $ref: "#/components/parameters/OpponentId"
+        - $ref: "#/components/parameters/PeriodType"
+        - $ref: "#/components/parameters/Date"
+        - $ref: "#/components/parameters/SeasonId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200": { description: Paginated shared match evidence retrieved }
+  /api/v1/admin/rivalries/recalculate:
+    post:
+      operationId: recalculateRivalries
+      tags: [Admin, Rivalries]
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                playerId: { type: string, pattern: '^MM\\d{3,}$' }
+                periodTypes:
+                  type: array
+                  minItems: 1
+                  maxItems: 4
+                  uniqueItems: true
+                  items:
+                    type: string
+                    enum: [weekly, monthly, season, all_time]
+                date: { type: string, format: date-time }
+                seasonId: { type: string, pattern: "^[a-fA-F0-9]{24}$" }
+                reason: { type: string, minLength: 5, maxLength: 1000 }
+      responses:
+        "200": { description: Rivalry caches recalculated }
+        "401": { description: Authentication required }
+        "403": { description: Admin role required }
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: better-auth.session_token
+  parameters:
+    PlayerId:
+      in: path
+      name: playerId
+      required: true
+      schema: { type: string, pattern: '^MM\\d{3,}$' }
+    OpponentId:
+      in: path
+      name: opponentId
+      required: true
+      schema: { type: string, pattern: '^MM\\d{3,}$' }
+    PeriodType:
+      in: query
+      name: periodType
+      schema:
+        type: string
+        enum: [weekly, monthly, season, all_time]
+        default: all_time
+    Date:
+      in: query
+      name: date
+      schema: { type: string, format: date-time }
+    SeasonId:
+      in: query
+      name: seasonId
+      schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" }
+    Page:
+      in: query
+      name: page
+      schema: { type: integer, minimum: 1, default: 1 }
+    Limit:
+      in: query
+      name: limit
+      schema: { type: integer, minimum: 1, maximum: 50, default: 10 }

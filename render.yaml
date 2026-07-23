@@ -1,0 +1,91 @@
+services:
+  - type: web
+    name: mini-militia-league-api
+    runtime: node
+    region: singapore
+    plan: starter
+    buildCommand: npm ci --omit=dev
+    startCommand: npm run start -w server
+    healthCheckPath: /api/v1/health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB_NAME
+        value: mini_militia_league
+      - key: CLIENT_ORIGINS
+        sync: false
+      - key: PUBLIC_APP_URL
+        sync: false
+      - key: PUBLIC_API_URL
+        sync: false
+      - key: BETTER_AUTH_URL
+        sync: false
+      - key: BETTER_AUTH_SECRET
+        generateValue: true
+      - key: BETTER_AUTH_COOKIE_PREFIX
+        value: mini_militia
+      - key: AUTH_COOKIE_SAME_SITE
+        value: none
+      - key: AUTH_SESSION_EXPIRES_IN
+        value: "604800"
+      - key: AUTH_SESSION_UPDATE_AGE
+        value: "86400"
+      - key: AUTH_SESSION_FRESH_AGE
+        value: "86400"
+      - key: TRUST_PROXY
+        value: "true"
+      - key: LOG_LEVEL
+        value: info
+      - key: JSON_BODY_LIMIT
+        value: 1mb
+      - key: API_RATE_LIMIT_WINDOW_MS
+        value: "900000"
+      - key: API_RATE_LIMIT_MAX_REQUESTS
+        value: "300"
+      - key: LEAGUE_TIMEZONE
+        value: Asia/Dhaka
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CLOUDINARY_PLAYER_FOLDER
+        value: mini-militia/players
+      - key: CLOUDINARY_MATCH_FOLDER
+        value: mini-militia/matches
+      - key: MATCH_SCREENSHOT_MAX_BYTES
+        value: "10485760"
+      - key: OCR_PROVIDER
+        value: google-vision
+      - key: GOOGLE_VISION_API_KEY
+        sync: false
+      - key: OCR_MAX_ATTEMPTS
+        value: "3"
+      - key: OCR_LOW_CONFIDENCE_THRESHOLD
+        value: "0.75"
+      - key: OCR_PARSER_PROFILE
+        value: mini-militia-final-score-v1
+      - key: OCR_CROP_X_RATIO
+        value: "0.205"
+      - key: OCR_CROP_Y_RATIO
+        value: "0.30"
+      - key: OCR_CROP_WIDTH_RATIO
+        value: "0.32"
+      - key: OCR_CROP_HEIGHT_RATIO
+        value: "0.51"
+      - key: OCR_UPSCALE_WIDTH
+        value: "1600"
+      - key: AI_PROVIDER
+        value: disabled
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-5.6-luna
+      - key: AI_REQUEST_TIMEOUT_MS
+        value: "20000"
+      - key: AI_MAX_OUTPUT_TOKENS
+        value: "1200"

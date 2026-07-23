@@ -1,0 +1,13 @@
+[build]
+builder = "RAILPACK"
+buildCommand = "npm ci --omit=dev"
+watchPatterns = ["server/**", "shared/**", "package.json", "package-lock.json", "railway.toml"]
+
+[deploy]
+startCommand = "npm run start -w server"
+healthcheckPath = "/api/v1/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+overlapSeconds = 20
+drainingSeconds = 15

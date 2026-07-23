@@ -1,0 +1,46 @@
+{
+  "name": "@mini-militia/client",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run --pool=threads --maxWorkers=4",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage --pool=threads --maxWorkers=4",
+    "test:critical": "vitest run src/features/auth/components/route-guards.test.jsx src/test/critical-accessibility.test.jsx src/features/auth/schemas/auth.schemas.test.js src/features/players/schemas/player.schemas.test.js src/features/sharing/utils/share-actions.test.js --pool=threads --maxWorkers=4"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.4.0",
+    "@mini-militia/shared": "*",
+    "@tanstack/react-query": "^5.101.2",
+    "@tanstack/react-query-devtools": "^5.101.2",
+    "axios": "^1.18.1",
+    "better-auth": "^1.6.23",
+    "lucide-react": "^1.25.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-hook-form": "^7.82.0",
+    "react-router-dom": "^7.18.1",
+    "recharts": "^3.9.2",
+    "sonner": "^2.0.7",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@vitejs/plugin-react": "^6.0.3",
+    "@vitest/coverage-v8": "^4.1.10",
+    "axe-core": "^4.10.3",
+    "jsdom": "^29.1.1",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
+  }
+}
