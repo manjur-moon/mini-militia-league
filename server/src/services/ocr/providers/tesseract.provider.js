@@ -2,7 +2,6 @@ import sharp from "sharp";
 import { createWorker, PSM } from "tesseract.js";
 import { OCRProviderError } from "../ocr-provider.error.js";
 
-
 const REQUEST_TIMEOUT_MS = 30_000;
 
 async function downloadImage(imageUrl) {
@@ -16,18 +15,14 @@ async function downloadImage(imageUrl) {
       },
     });
   } catch (error) {
-    const timedOut =
-      error?.name === "TimeoutError" ||
-      error?.name === "AbortError";
+    const timedOut = error?.name === "TimeoutError" || error?.name === "AbortError";
 
     throw new OCRProviderError(
       timedOut
         ? "Downloading the OCR source image timed out."
         : "Unable to download the OCR source image.",
       {
-        code: timedOut
-          ? "OCR_SOURCE_DOWNLOAD_TIMEOUT"
-          : "OCR_SOURCE_DOWNLOAD_FAILED",
+        code: timedOut ? "OCR_SOURCE_DOWNLOAD_TIMEOUT" : "OCR_SOURCE_DOWNLOAD_FAILED",
         retryable: true,
         cause: error,
       },
@@ -35,26 +30,19 @@ async function downloadImage(imageUrl) {
   }
 
   if (!response.ok) {
-    throw new OCRProviderError(
-      "Unable to download the stored screenshot for OCR.",
-      {
-        code: "OCR_SOURCE_DOWNLOAD_FAILED",
-        retryable: response.status >= 500,
-      },
-    );
+    throw new OCRProviderError("Unable to download the stored screenshot for OCR.", {
+      code: "OCR_SOURCE_DOWNLOAD_FAILED",
+      retryable: response.status >= 500,
+    });
   }
 
-  const contentType =
-    response.headers.get("content-type") ?? "";
+  const contentType = response.headers.get("content-type") ?? "";
 
   if (!contentType.startsWith("image/")) {
-    throw new OCRProviderError(
-      "The stored OCR source is not a valid image.",
-      {
-        code: "OCR_SOURCE_INVALID",
-        retryable: false,
-      },
-    );
+    throw new OCRProviderError("The stored OCR source is not a valid image.", {
+      code: "OCR_SOURCE_INVALID",
+      retryable: false,
+    });
   }
 
   return Buffer.from(await response.arrayBuffer());
@@ -62,21 +50,13 @@ async function downloadImage(imageUrl) {
 
 async function prepareImage(imageBuffer) {
   try {
-    return await sharp(imageBuffer)
-      .grayscale()
-      .normalize()
-      .sharpen()
-      .png()
-      .toBuffer();
+    return await sharp(imageBuffer).grayscale().normalize().sharpen().png().toBuffer();
   } catch (error) {
-    throw new OCRProviderError(
-      "Unable to prepare the screenshot for local OCR.",
-      {
-        code: "OCR_IMAGE_PREPROCESSING_FAILED",
-        retryable: false,
-        cause: error,
-      },
-    );
+    throw new OCRProviderError("Unable to prepare the screenshot for local OCR.", {
+      code: "OCR_IMAGE_PREPROCESSING_FAILED",
+      retryable: false,
+      cause: error,
+    });
   }
 }
 
@@ -106,17 +86,13 @@ export const tesseractProvider = Object.freeze({
       return {
         rawText,
 
-        averageConfidence: Number.isFinite(confidence)
-          ? confidence / 100
-          : null,
+        averageConfidence: Number.isFinite(confidence) ? confidence / 100 : null,
 
         providerJobId: null,
 
         rawResponse: {
           engine: "tesseract.js",
-          confidence: Number.isFinite(confidence)
-            ? confidence
-            : null,
+          confidence: Number.isFinite(confidence) ? confidence : null,
         },
       };
     } catch (error) {
@@ -124,18 +100,12 @@ export const tesseractProvider = Object.freeze({
         throw error;
       }
 
-      const timedOut =
-        error?.name === "TimeoutError" ||
-        error?.name === "AbortError";
+      const timedOut = error?.name === "TimeoutError" || error?.name === "AbortError";
 
       throw new OCRProviderError(
-        timedOut
-          ? "Local OCR processing timed out."
-          : "Local OCR processing failed.",
+        timedOut ? "Local OCR processing timed out." : "Local OCR processing failed.",
         {
-          code: timedOut
-            ? "OCR_PROVIDER_TIMEOUT"
-            : "TESSERACT_OCR_ERROR",
+          code: timedOut ? "OCR_PROVIDER_TIMEOUT" : "TESSERACT_OCR_ERROR",
           retryable: timedOut,
           cause: error,
         },
