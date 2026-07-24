@@ -38,3 +38,10 @@ Thumbs.db
 
 # Safe test environment
 !client/.env.test
+
+# Keep safe environment templates
+!server/.env.example
+!server/.env.production.example
+!client/.env.example
+!client/.env.production.example
+!client/.env.test
