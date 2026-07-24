@@ -39,12 +39,13 @@ async function runPreflight() {
     "Cloudinary cloud name, API key and API secret are required in production.",
   );
   requireCondition(
-    env.OCR_PROVIDER === "google-vision",
-    "OCR_PROVIDER must be google-vision for the production OCR workflow.",
+    ["google-vision", "tesseract"].includes(env.OCR_PROVIDER),
+    "OCR_PROVIDER must be google-vision or tesseract in production.",
   );
+
   requireCondition(
-    Boolean(env.GOOGLE_VISION_API_KEY),
-    "GOOGLE_VISION_API_KEY is required for production OCR.",
+    env.OCR_PROVIDER !== "google-vision" || Boolean(env.GOOGLE_VISION_API_KEY),
+    "GOOGLE_VISION_API_KEY is required when OCR_PROVIDER=google-vision.",
   );
   warnCondition(
     env.AI_PROVIDER === "openai" || env.AI_PROVIDER === "disabled",

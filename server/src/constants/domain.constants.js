@@ -20,7 +20,12 @@ export const OCR_JOB_STATUSES = Object.freeze([
   "succeeded",
   "failed",
 ]);
-export const OCR_PROVIDERS = Object.freeze(["google-vision", "mock", "disabled"]);
+export const OCR_PROVIDERS = Object.freeze([
+  "google-vision",
+  "tesseract",
+  "mock",
+  "disabled",
+]);
 export const PLAYER_MATCH_STATUSES = Object.freeze([
   "exact",
   "alias",
