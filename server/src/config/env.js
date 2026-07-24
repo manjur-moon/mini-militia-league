@@ -1,7 +1,6 @@
 import "dotenv/config";
 import { z } from "zod";
 
-
 const optionalNonEmptyString = z.preprocess(
   (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
   z.string().trim().min(1).optional(),
@@ -72,8 +71,8 @@ const envSchema = z
       .positive()
       .default(10 * 1024 * 1024),
     OCR_PROVIDER: z
-  .enum(["google-vision", "tesseract", "mock", "disabled"])
-  .default("disabled"),
+      .enum(["google-vision", "tesseract", "mock", "disabled"])
+      .default("disabled"),
     GOOGLE_VISION_API_KEY: optionalNonEmptyString,
     OCR_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(3),
     OCR_LOW_CONFIDENCE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.75),

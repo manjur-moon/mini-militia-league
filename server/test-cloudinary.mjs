@@ -9,9 +9,7 @@ const apiKey = process.env.CLOUDINARY_API_KEY;
 const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
 if (!cloudName || !apiKey || !apiSecret) {
-  process.stderr.write(
-    "Cloudinary credentials are missing from server/.env\n",
-  );
+  process.stderr.write("Cloudinary credentials are missing from server/.env\n");
 
   process.exitCode = 1;
 } else {
@@ -43,9 +41,7 @@ if (!cloudName || !apiKey || !apiSecret) {
           }
 
           if (!uploadResult) {
-            reject(
-              new Error("Cloudinary returned an empty upload result."),
-            );
+            reject(new Error("Cloudinary returned an empty upload result."));
             return;
           }
 
@@ -65,16 +61,16 @@ if (!cloudName || !apiKey || !apiSecret) {
 
     process.stdout.write("Cloudinary test image deleted successfully.\n");
   } catch (error) {
-  process.stderr.write("Cloudinary image upload failed.\n");
+    process.stderr.write("Cloudinary image upload failed.\n");
 
-  process.stderr.write(
-    `${inspect(error, {
-      depth: 10,
-      colors: false,
-      compact: false,
-    })}\n`,
-  );
+    process.stderr.write(
+      `${inspect(error, {
+        depth: 10,
+        colors: false,
+        compact: false,
+      })}\n`,
+    );
 
-  process.exitCode = 1;
-}
+    process.exitCode = 1;
+  }
 }

@@ -24,10 +24,7 @@ import { PlayerRivalryPanel } from "@/features/rivalries/components/player-rival
 import { PlayerChallengePanel } from "@/features/challenges/components/player-challenge-panel.jsx";
 import { PlayerHallOfFamePanel } from "@/features/hall-of-fame/components/player-hall-of-fame-panel.jsx";
 import { PlayerProfileSharePanel } from "@/features/sharing/components/player-profile-share-panel.jsx";
-import {
-  getLinkedPlayerProfile,
-  getPlayerProfile,
-} from "@/services/player.service.js";
+import { getLinkedPlayerProfile, getPlayerProfile } from "@/services/player.service.js";
 
 function formatNumber(value, digits = 2) {
   return Number(value ?? 0).toFixed(digits);
@@ -87,9 +84,7 @@ export function PlayerProfilePage({ linked = false }) {
   return (
     <section
       className={
-        linked
-          ? "space-y-8"
-          : "mx-auto max-w-7xl space-y-8 px-4 py-14 sm:px-6 lg:px-8"
+        linked ? "space-y-8" : "mx-auto max-w-7xl space-y-8 px-4 py-14 sm:px-6 lg:px-8"
       }
     >
       {!linked ? (

@@ -55,9 +55,7 @@ function toEditableRows(results) {
     }));
 }
 
-export function MatchReviewPage({
-  archivePath = "/moderator/archive",
-}) {
+export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
   const { matchId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();

@@ -1,7 +1,4 @@
-import {
-  connectToDatabase,
-  disconnectFromDatabase,
-} from "../config/database.js";
+import { connectToDatabase, disconnectFromDatabase } from "../config/database.js";
 import { AISummary } from "../models/ai-summary.model.js";
 
 async function main() {

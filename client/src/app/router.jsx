@@ -1,8 +1,5 @@
 import { ROLE_ACCESS } from "@mini-militia/shared";
-import {
-  createBrowserRouter,
-  Navigate,
-} from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "@/features/auth/components/protected-route.jsx";
 import { PublicOnlyRoute } from "@/features/auth/components/public-only-route.jsx";
 import { RoleRoute } from "@/features/rbac/components/role-route.jsx";

@@ -1,8 +1,5 @@
 import { authDatabase } from "../config/auth-database.js";
-import {
-  connectToDatabase,
-  disconnectFromDatabase,
-} from "../config/database.js";
+import { connectToDatabase, disconnectFromDatabase } from "../config/database.js";
 
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

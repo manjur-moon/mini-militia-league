@@ -9,8 +9,6 @@ describe("normalizeApiBaseUrl", () => {
   });
 
   it("keeps a backend origin unchanged", () => {
-    expect(normalizeApiBaseUrl("http://localhost:5000")).toBe(
-      "http://localhost:5000",
-    );
+    expect(normalizeApiBaseUrl("http://localhost:5000")).toBe("http://localhost:5000");
   });
 });

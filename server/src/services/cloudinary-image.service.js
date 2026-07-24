@@ -132,9 +132,7 @@ export const cloudinaryImageService = Object.freeze({
       });
 
       if (!new Set(["ok", "not found"]).has(result.result)) {
-        throw new Error(
-          `Unexpected Cloudinary deletion result: ${result.result}`,
-        );
+        throw new Error(`Unexpected Cloudinary deletion result: ${result.result}`);
       }
 
       return result;
