@@ -65,8 +65,8 @@ check(
   serverProductionEnv.includes("TRUST_PROXY=true"),
 );
 check(
-  "Production env uses Tesseract OCR",
-  serverProductionEnv.includes("OCR_PROVIDER=Tesseract"),
+  "Production env uses tesseract OCR",
+  serverProductionEnv.includes("OCR_PROVIDER=tesseract"),
 );
 
 const clientProductionEnv = read("client/.env.production.example");
