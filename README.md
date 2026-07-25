@@ -4,8 +4,6 @@ Mini Militia League
 
 A competitive league management and analytics platform for verified match tracking, player rankings, titles, achievements, and performance insights.
 
-
-
 Live Website · Server API
 
 </div>
@@ -241,26 +239,26 @@ Player photo and match screenshot storage through the server
 Frontend Architecture
 
 flowchart LR
-    Browser[Browser] --> Router[React Router]
-    Router --> Public[Public Pages]
-    Router --> Protected[Protected Dashboards]
-    Protected --> Auth[Better Auth Session]
-    Public --> Query[TanStack Query]
-    Protected --> Query
-    Query --> Client[Axios API Client]
-    Client --> Server[Mini Militia Express API]
+Browser[Browser] --> Router[React Router]
+Router --> Public[Public Pages]
+Router --> Protected[Protected Dashboards]
+Protected --> Auth[Better Auth Session]
+Public --> Query[TanStack Query]
+Protected --> Query
+Query --> Client[Axios API Client]
+Client --> Server[Mini Militia Express API]
 
 Typical source structure:
 
 src/
-├── app/                    # Router and application providers
-├── components/             # Shared brand and UI components
-├── config/                 # Navigation configuration
-├── features/               # Authentication and feature modules
-├── layouts/                # Public and dashboard layouts
-├── lib/                    # API client, auth client, and utilities
-├── pages/                  # Public and protected pages
-└── services/               # Feature-specific API services
+├── app/ # Router and application providers
+├── components/ # Shared brand and UI components
+├── config/ # Navigation configuration
+├── features/ # Authentication and feature modules
+├── layouts/ # Public and dashboard layouts
+├── lib/ # API client, auth client, and utilities
+├── pages/ # Public and protected pages
+└── services/ # Feature-specific API services
 
 Application Routes
 
