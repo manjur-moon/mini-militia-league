@@ -181,23 +181,30 @@ export function PublicLayout() {
       </main>
 
       <footer className="border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-          <p>
-            © {new Date().getFullYear()} Mini Militia League. Verified match data powers
-            official analytics.
-          </p>
+  <div className="mx-auto grid max-w-7xl gap-4 px-4 py-8 text-sm text-slate-500 sm:px-6 md:grid-cols-[1fr_auto_1fr] md:items-center lg:px-8">
+    <p className="text-center md:text-left">
+      © {new Date().getFullYear()} Mini Militia League. Verified match data
+      powers official analytics.
+    </p>
 
-          <div className="flex gap-4">
-            <Link to="/login" className="font-bold hover:text-amber-600">
-              Sign in
-            </Link>
+    <p className="text-center text-xs font-medium tracking-wide text-slate-500">
+      Developed by :{" "}
+      <span className="animate-pulse font-bold text-amber-500 drop-shadow-[0_0_5px_rgba(245,158,11,0.45)] dark:text-amber-300">
+        Manjurul Islam Moon
+      </span>
+    </p>
 
-            <Link to="/register" className="font-bold hover:text-amber-600">
-              Register
-            </Link>
-          </div>
-        </div>
-      </footer>
+    <div className="flex justify-center gap-4 md:justify-end">
+      <Link to="/login" className="font-bold hover:text-amber-600">
+        Sign in
+      </Link>
+
+      <Link to="/register" className="font-bold hover:text-amber-600">
+        Register
+      </Link>
+    </div>
+  </div>
+</footer>
     </div>
   );
 }
