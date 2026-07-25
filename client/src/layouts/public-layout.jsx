@@ -23,9 +23,7 @@ const publicLinks = [
   { label: "Seasons", to: "/seasons" },
 ];
 
-const priorityLinks = [
-  { label: "Hall of Fame", to: "/hall-of-fame" },
-];
+const priorityLinks = [{ label: "Hall of Fame", to: "/hall-of-fame" }];
 
 function getDesktopLinkClass({ isActive }) {
   return [
@@ -102,11 +100,7 @@ export function PublicLayout() {
             aria-label="Priority navigation"
           >
             {priorityLinks.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={getPriorityLinkClass}
-              >
+              <NavLink key={item.to} to={item.to} className={getPriorityLinkClass}>
                 {item.label}
               </NavLink>
             ))}
@@ -118,10 +112,7 @@ export function PublicLayout() {
           </div>
 
           <div
-            className={[
-              "flex shrink-0 items-center gap-2",
-              "max-xl:ml-auto",
-            ].join(" ")}
+            className={["flex shrink-0 items-center gap-2", "max-xl:ml-auto"].join(" ")}
           >
             <ThemeToggle />
 
@@ -192,8 +183,8 @@ export function PublicLayout() {
       <footer className="border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <p>
-            © {new Date().getFullYear()} Mini Militia League. Verified match
-            data powers official analytics.
+            © {new Date().getFullYear()} Mini Militia League. Verified match data powers
+            official analytics.
           </p>
 
           <div className="flex gap-4">
