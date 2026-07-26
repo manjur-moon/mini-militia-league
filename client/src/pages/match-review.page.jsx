@@ -12,13 +12,14 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+
 import { ErrorState } from "@/components/ui/error-state.jsx";
 import { LoadingState } from "@/components/ui/loading-state.jsx";
 import { PageHeader } from "@/components/ui/page-header.jsx";
 import { authClient } from "@/lib/auth-client.js";
-import { getPlayers } from "@/services/player.service.js";
 import {
   approveMatchRevision,
+  deleteRejectedMatch,
   getMatch,
   getMatchRevisions,
   proposeMatchRevision,
@@ -28,6 +29,7 @@ import {
   saveMatchReview,
   verifyMatch,
 } from "@/services/match.service.js";
+import { getPlayers } from "@/services/player.service.js";
 
 const inputClass =
   "w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm dark:border-slate-700 dark:bg-slate-950";
@@ -59,10 +61,13 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
   const { matchId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
   const session = authClient.useSession();
   const isAdmin = session.data?.user?.role === "admin";
+
   const [rows, setRows] = useState([]);
   const [correctionMode, setCorrectionMode] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [reason, setReason] = useState(
     "Moderator verified screenshot against corrected rows",
   );
@@ -70,18 +75,30 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
   const matchQuery = useQuery({
     queryKey: ["match", matchId],
     queryFn: () => getMatch(matchId),
+    enabled: Boolean(matchId),
     refetchInterval: (query) => {
       const status = query.state.data?.data?.ocrJob?.status;
+
       return ["queued", "processing"].includes(status) ? 2500 : false;
     },
   });
+
   const detail = matchQuery.data?.data;
+
   const verified = detail?.match?.status === "verified";
+
+  const rejected = detail?.match?.status === "rejected";
+
   const revisionsQuery = useQuery({
     queryKey: ["match-revisions", matchId],
-    queryFn: () => getMatchRevisions(matchId, { page: 1, limit: 20 }),
-    enabled: Boolean(verified),
+    queryFn: () =>
+      getMatchRevisions(matchId, {
+        page: 1,
+        limit: 20,
+      }),
+    enabled: Boolean(verified && matchId),
   });
+
   const playersQuery = useQuery({
     queryKey: ["review-player-options"],
     queryFn: async () => {
@@ -101,47 +118,122 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
           sortOrder: "asc",
         }),
       ]);
-      return { data: [...active.data, ...inactive.data] };
+
+      return {
+        data: [...active.data, ...inactive.data],
+      };
     },
   });
 
   useEffect(() => {
-    if (detail?.results) setRows(toEditableRows(detail.results));
+    if (detail?.results) {
+      setRows(toEditableRows(detail.results));
+    }
   }, [detail]);
 
   const players = playersQuery.data?.data ?? [];
+
   const terminal = ["verified", "rejected"].includes(detail?.match?.status);
+
   const editable = !terminal || (verified && isAdmin && correctionMode);
+
   const canVerify = rows.length >= 2 && rows.every((row) => row.playerId) && !terminal;
+
   const openRevision = revisionsQuery.data?.data?.find(
     (revision) => revision.status === "proposed",
   );
 
   const mutation = useMutation({
     mutationFn: ({ type, payload }) => {
-      if (type === "review") return saveMatchReview(payload);
-      if (type === "verify") return verifyMatch(payload);
-      if (type === "reject") return rejectMatch(payload);
-      if (type === "correction") return proposeMatchRevision(payload);
-      if (type === "approve-revision") return approveMatchRevision(payload);
-      if (type === "reject-revision") return rejectMatchRevision(payload);
+      if (type === "review") {
+        return saveMatchReview(payload);
+      }
+
+      if (type === "verify") {
+        return verifyMatch(payload);
+      }
+
+      if (type === "reject") {
+        return rejectMatch(payload);
+      }
+
+      if (type === "correction") {
+        return proposeMatchRevision(payload);
+      }
+
+      if (type === "approve-revision") {
+        return approveMatchRevision(payload);
+      }
+
+      if (type === "reject-revision") {
+        return rejectMatchRevision(payload);
+      }
+
       return retryOCR(payload.jobId);
     },
+
     onSuccess: (result) => {
       toast.success(result.message);
       setCorrectionMode(false);
-      queryClient.invalidateQueries({ queryKey: ["match", matchId] });
-      queryClient.invalidateQueries({ queryKey: ["matches"] });
-      queryClient.invalidateQueries({ queryKey: ["match-revisions", matchId] });
-      queryClient.invalidateQueries({ queryKey: ["player-profile"] });
-      queryClient.invalidateQueries({ queryKey: ["public-matches"] });
+
+      queryClient.invalidateQueries({
+        queryKey: ["match", matchId],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["matches"],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["match-revisions", matchId],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["player-profile"],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["public-matches"],
+      });
     },
-    onError: (error) => toast.error(error.message),
+
+    onError: (error) => {
+      toast.error(error.message ?? "Unable to update the match.");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteRejectedMatch(matchId),
+
+    onSuccess: async (result) => {
+      toast.success(result.message ?? "Rejected match deleted successfully.");
+
+      setDeleteDialogOpen(false);
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["matches"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["public-matches"],
+        }),
+      ]);
+
+      navigate(archivePath, {
+        replace: true,
+      });
+    },
+
+    onError: (error) => {
+      toast.error(error.message ?? "Unable to delete the rejected match.");
+    },
   });
 
   const duplicateProblem = useMemo(() => {
     const playerIds = rows.map((row) => row.playerId).filter(Boolean);
+
     const placements = rows.map((row) => Number(row.placement));
+
     return (
       new Set(playerIds).size !== playerIds.length ||
       new Set(placements).size !== placements.length
@@ -152,20 +244,30 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
     const ordered = rows
       .map((row) => Number(row.placement))
       .sort((left, right) => left - right);
+
     return ordered.some((placement, index) => placement !== index + 1);
   }, [rows]);
 
   function updateRow(index, key, value) {
     setRows((current) =>
       current.map((row, rowIndex) =>
-        rowIndex === index ? { ...row, [key]: value } : row,
+        rowIndex === index
+          ? {
+              ...row,
+              [key]: value,
+            }
+          : row,
       ),
     );
   }
 
   function normalizedRows() {
     return rows.map((row) => ({
-      ...(row.resultId ? { resultId: row.resultId } : {}),
+      ...(row.resultId
+        ? {
+            resultId: row.resultId,
+          }
+        : {}),
       playerId: row.playerId,
       kills: Number(row.kills),
       deaths: Number(row.deaths),
@@ -175,8 +277,11 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
 
   function saveReview() {
     if (duplicateProblem || placementSequenceProblem) {
-      return toast.error("Players must be unique and placements must run from 1 to N.");
+      toast.error("Players must be unique and placements must run from 1 to N.");
+
+      return;
     }
+
     mutation.mutate({
       type: "review",
       payload: {
@@ -199,10 +304,11 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
       placementSequenceProblem ||
       rows.some((row) => !row.resultId)
     ) {
-      return toast.error(
-        "Every official row, player and sequential placement is required.",
-      );
+      toast.error("Every official row, player and sequential placement is required.");
+
+      return;
     }
+
     mutation.mutate({
       type: "correction",
       payload: {
@@ -220,7 +326,10 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
     });
   }
 
-  if (matchQuery.isPending) return <LoadingState title="Loading match review" />;
+  if (matchQuery.isPending) {
+    return <LoadingState title="Loading match review" />;
+  }
+
   if (matchQuery.isError) {
     return (
       <ErrorState
@@ -234,13 +343,17 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
     <div className="space-y-7">
       <PageHeader
         eyebrow={detail.match.matchCode}
-        title={verified ? "Verified match" : "OCR verification"}
+        title={
+          verified ? "Verified match" : rejected ? "Rejected match" : "OCR verification"
+        }
         description={
           verified
             ? "Official results are locked. Admin corrections require a versioned proposal and approval."
-            : "Compare the preserved screenshot with every row. Only the corrected snapshot can be verified."
+            : rejected
+              ? "This match was rejected and is excluded from official statistics."
+              : "Compare the preserved screenshot with every row. Only the corrected snapshot can be verified."
         }
-        icon={verified ? ShieldCheck : ScanLine}
+        icon={verified ? ShieldCheck : rejected ? XCircle : ScanLine}
         action={
           <button
             type="button"
@@ -261,33 +374,49 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
               className="w-full rounded-2xl border border-slate-200 object-contain dark:border-slate-800"
             />
           </a>
+
           <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
             <p>
               <strong>Match status:</strong> {detail.match.status.replaceAll("_", " ")}
             </p>
+
             <p>
               <strong>Official revision:</strong> {detail.match.currentRevision}
             </p>
+
             <p>
               <strong>Statistics:</strong>{" "}
               {detail.match.statisticsRecalculation?.status?.replaceAll("_", " ") ??
                 "not started"}
             </p>
+
             <p>
               <strong>OCR status:</strong> {detail.ocrJob?.status ?? "Unavailable"}
             </p>
+
             <p>
               <strong>Provider:</strong> {detail.ocrJob?.provider ?? "Unavailable"}
             </p>
+
             <p>
               <strong>Attempts:</strong> {detail.ocrJob?.attempts ?? 0}/
               {detail.ocrJob?.maxAttempts ?? 0}
             </p>
+
+            {rejected && detail.match.verification?.rejectionReason ? (
+              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+                <p className="font-black">Rejection reason</p>
+
+                <p className="mt-1">{detail.match.verification.rejectionReason}</p>
+              </div>
+            ) : null}
+
             {detail.ocrJob?.errorHistory?.length ? (
               <p className="mt-2 text-red-600">
                 {detail.ocrJob.errorHistory.at(-1).message}
               </p>
             ) : null}
+
             {detail.ocrJob?.status === "failed" &&
             detail.ocrJob.attempts < detail.ocrJob.maxAttempts ? (
               <button
@@ -295,12 +424,27 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                 onClick={() =>
                   mutation.mutate({
                     type: "retry",
-                    payload: { jobId: detail.ocrJob.id },
+                    payload: {
+                      jobId: detail.ocrJob.id,
+                    },
                   })
                 }
                 className="mt-3 inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 font-bold dark:border-slate-700"
               >
-                <RefreshCw size={16} /> Retry OCR
+                <RefreshCw size={16} />
+                Retry OCR
+              </button>
+            ) : null}
+
+            {rejected && isAdmin ? (
+              <button
+                type="button"
+                disabled={deleteMutation.isPending}
+                onClick={() => setDeleteDialogOpen(true)}
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 font-black text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Trash2 size={17} aria-hidden="true" />
+                Delete rejected match
               </button>
             ) : null}
           </div>
@@ -315,11 +459,13 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div>
                   <p className="font-black">{row.sourceName}</p>
+
                   <p className="text-xs text-slate-500">
                     OCR confidence: {Math.round((row.confidence ?? 0) * 100)}%{" "}
                     {row.warnings.length ? `· ${row.warnings.join(", ")}` : ""}
                   </p>
                 </div>
+
                 {!terminal ? (
                   <button
                     type="button"
@@ -334,6 +480,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                   </button>
                 ) : null}
               </div>
+
               <div className="grid gap-3 sm:grid-cols-[1.5fr_repeat(3,90px)]">
                 <select
                   className={inputClass}
@@ -342,12 +489,14 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                   onChange={(event) => updateRow(index, "playerId", event.target.value)}
                 >
                   <option value="">Select registered player</option>
+
                   {players.map((player) => (
                     <option key={player.id} value={player.id}>
                       {player.playerId} — {player.name}
                     </option>
                   ))}
                 </select>
+
                 <input
                   className={inputClass}
                   type="number"
@@ -357,6 +506,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                   disabled={!editable}
                   onChange={(event) => updateRow(index, "kills", event.target.value)}
                 />
+
                 <input
                   className={inputClass}
                   type="number"
@@ -366,6 +516,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                   disabled={!editable}
                   onChange={(event) => updateRow(index, "deaths", event.target.value)}
                 />
+
                 <input
                   className={inputClass}
                   type="number"
@@ -400,19 +551,24 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
               }
               className="inline-flex items-center gap-2 rounded-xl border border-dashed border-slate-400 px-4 py-2 font-bold"
             >
-              <Plus size={17} /> Add missing row
+              <Plus size={17} />
+              Add missing row
             </button>
           ) : null}
 
-          <label className="block text-sm font-bold">
-            {verified ? "Correction reason" : "Review reason"}
-            <textarea
-              className={`${inputClass} mt-2 min-h-24`}
-              value={reason}
-              disabled={terminal && !correctionMode}
-              onChange={(event) => setReason(event.target.value)}
-            />
-          </label>
+          {!rejected ? (
+            <label className="block text-sm font-bold">
+              {verified ? "Correction reason" : "Review reason"}
+
+              <textarea
+                className={`${inputClass} mt-2 min-h-24`}
+                value={reason}
+                disabled={terminal && !correctionMode}
+                onChange={(event) => setReason(event.target.value)}
+              />
+            </label>
+          ) : null}
+
           {duplicateProblem || placementSequenceProblem ? (
             <p className="text-sm font-bold text-red-600">
               Players must be unique and placements must form the sequence 1 to{" "}
@@ -432,6 +588,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
               >
                 Save review
               </button>
+
               <button
                 type="button"
                 disabled={
@@ -441,17 +598,31 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                   placementSequenceProblem
                 }
                 onClick={() =>
-                  mutation.mutate({ type: "verify", payload: { matchId, reason } })
+                  mutation.mutate({
+                    type: "verify",
+                    payload: {
+                      matchId,
+                      reason,
+                    },
+                  })
                 }
                 className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 font-black text-slate-950 disabled:opacity-40"
               >
-                <ShieldCheck size={18} /> Verify match
+                <ShieldCheck size={18} />
+                Verify match
               </button>
+
               <button
                 type="button"
                 disabled={mutation.isPending || reason.trim().length < 3}
                 onClick={() =>
-                  mutation.mutate({ type: "reject", payload: { matchId, reason } })
+                  mutation.mutate({
+                    type: "reject",
+                    payload: {
+                      matchId,
+                      reason,
+                    },
+                  })
                 }
                 className="rounded-xl bg-red-600 px-4 py-2.5 font-black text-white disabled:opacity-40"
               >
@@ -467,11 +638,13 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                   type="button"
                   onClick={() => {
                     setCorrectionMode(true);
+
                     setReason("Admin correction required for verified match data");
                   }}
                   className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 font-black text-slate-950"
                 >
-                  <PencilLine size={18} /> Propose verified correction
+                  <PencilLine size={18} />
+                  Propose verified correction
                 </button>
               ) : (
                 <div className="flex flex-wrap gap-3">
@@ -486,12 +659,15 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                     onClick={proposeCorrection}
                     className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 font-black text-slate-950 disabled:opacity-40"
                   >
-                    <PencilLine size={18} /> Submit correction proposal
+                    <PencilLine size={18} />
+                    Submit correction proposal
                   </button>
+
                   <button
                     type="button"
                     onClick={() => {
                       setCorrectionMode(false);
+
                       setRows(toEditableRows(detail.results));
                     }}
                     className="rounded-xl border border-slate-400 px-4 py-2.5 font-black"
@@ -511,9 +687,12 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
             <p className="text-sm font-black uppercase tracking-[0.2em] text-amber-700 dark:text-amber-300">
               Correction history
             </p>
+
             <h2 className="mt-2 text-2xl font-black">Verified revisions</h2>
           </div>
+
           {revisionsQuery.isPending ? <LoadingState title="Loading revisions" /> : null}
+
           {revisionsQuery.data?.data?.length ? (
             <div className="grid gap-3">
               {revisionsQuery.data.data.map((revision) => (
@@ -525,11 +704,14 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                     <p className="font-black">
                       Revision proposal #{revision.revisionNumber}
                     </p>
+
                     <p className="text-sm text-slate-500">{revision.reason}</p>
+
                     <p className="mt-1 text-xs font-bold uppercase">
                       {revision.status}
                     </p>
                   </div>
+
                   {revision.status === "proposed" && isAdmin ? (
                     <div className="flex gap-2">
                       <button
@@ -548,8 +730,10 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                         }
                         className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-3 py-2 text-sm font-black text-slate-950"
                       >
-                        <CheckCircle2 size={16} /> Approve
+                        <CheckCircle2 size={16} />
+                        Approve
                       </button>
+
                       <button
                         type="button"
                         disabled={mutation.isPending || reason.trim().length < 5}
@@ -565,7 +749,8 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                         }
                         className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-sm font-black text-white"
                       >
-                        <XCircle size={16} /> Reject
+                        <XCircle size={16} />
+                        Reject
                       </button>
                     </div>
                   ) : null}
@@ -576,6 +761,63 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
             <p className="text-sm text-slate-500">No correction revisions exist.</p>
           )}
         </section>
+      ) : null}
+
+      {deleteDialogOpen ? (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 p-4"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !deleteMutation.isPending) {
+              setDeleteDialogOpen(false);
+            }
+          }}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-rejected-match-title"
+            aria-describedby="delete-rejected-match-description"
+            className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+          >
+            <div className="grid size-12 place-items-center rounded-2xl bg-red-500/15 text-red-600 dark:text-red-400">
+              <Trash2 size={24} aria-hidden="true" />
+            </div>
+
+            <h2 id="delete-rejected-match-title" className="mt-5 text-2xl font-black">
+              Delete rejected match?
+            </h2>
+
+            <p
+              id="delete-rejected-match-description"
+              className="mt-3 text-sm leading-6 text-slate-500"
+            >
+              This will permanently remove the match screenshot and OCR data. This
+              action cannot be undone.
+            </p>
+
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                disabled={deleteMutation.isPending}
+                onClick={() => setDeleteDialogOpen(false)}
+                className="rounded-xl border border-slate-300 px-4 py-2.5 font-black transition hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                disabled={deleteMutation.isPending}
+                onClick={() => deleteMutation.mutate()}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 font-black text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Trash2 size={17} aria-hidden="true" />
+
+                {deleteMutation.isPending ? "Deleting..." : "Delete permanently"}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </div>
   );

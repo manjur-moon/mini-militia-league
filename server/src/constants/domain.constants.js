@@ -137,6 +137,7 @@ export const AUDIT_ACTIONS = Object.freeze([
   "match.reviewed",
   "match.verified",
   "match.rejected",
+  "match.deleted",
   "match.corrected",
   "match.correction_proposed",
   "match.correction_rejected",

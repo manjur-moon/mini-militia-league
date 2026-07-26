@@ -99,3 +99,20 @@ export async function rejectMatch(request, response) {
     }),
   });
 }
+
+export async function deleteRejectedMatch(request, response) {
+  const data = await matchService.deleteRejected({
+    actor: request.auth.user,
+    matchId: request.validated.params.matchId,
+    requestMeta: meta(request),
+  });
+
+  const screenshotCleanupFailed = data.screenshotDeletion.status === "failed";
+
+  return sendSuccess(response, {
+    message: screenshotCleanupFailed
+      ? "Rejected match deleted, but screenshot cleanup failed."
+      : "Rejected match deleted successfully.",
+    data,
+  });
+}

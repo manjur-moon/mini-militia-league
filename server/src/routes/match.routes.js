@@ -1,6 +1,8 @@
 import { ROLE_ACCESS, USER_ROLES } from "@mini-militia/shared";
 import { Router } from "express";
+
 import {
+  deleteRejectedMatch,
   getMatch,
   getOCRJob,
   listMatches,
@@ -55,14 +57,16 @@ import {
 
 export const matchRouter = Router();
 
-// Public requests are forced to verified-only projections. Moderator/Admin sessions
-// receive protected archive fields through the same read endpoints.
+// Public requests are forced to verified-only projections.
+// Moderator/Admin sessions receive protected archive fields
+// through the same read endpoints.
 matchRouter.get(
   "/",
   optionalAuth,
   validateRequest(listMatchesSchema),
   asyncHandler(listMatches),
 );
+
 matchRouter.get(
   "/:matchId",
   optionalAuth,
@@ -79,50 +83,66 @@ matchRouter.post(
   validateRequest(uploadMatchSchema),
   asyncHandler(uploadMatch),
 );
+
 matchRouter.get(
   "/ocr/jobs/:jobId",
   validateRequest(ocrJobIdSchema),
   asyncHandler(getOCRJob),
 );
+
 matchRouter.post(
   "/ocr/jobs/:jobId/retry",
   validateRequest(ocrJobIdSchema),
   asyncHandler(retryOCR),
 );
+
 matchRouter.patch(
   "/:matchId",
   validateRequest(updateMatchMetadataSchema),
   asyncHandler(updateMatchMetadata),
 );
+
 matchRouter.post(
   "/:matchId/results",
   validateRequest(addMatchResultSchema),
   asyncHandler(addMatchResult),
 );
+
 matchRouter.patch(
   "/:matchId/results/:resultId",
   validateRequest(updateMatchResultSchema),
   asyncHandler(updateMatchResult),
 );
+
 matchRouter.delete(
   "/:matchId/results/:resultId",
   validateRequest(removeMatchResultSchema),
   asyncHandler(removeMatchResult),
 );
+
 matchRouter.patch(
   "/:matchId/review",
   validateRequest(reviewMatchSchema),
   asyncHandler(reviewMatch),
 );
+
 matchRouter.post(
   "/:matchId/verify",
   validateRequest(matchDecisionSchema),
   asyncHandler(verifyMatch),
 );
+
 matchRouter.post(
   "/:matchId/reject",
   validateRequest(matchDecisionSchema),
   asyncHandler(rejectMatch),
+);
+
+matchRouter.delete(
+  "/:matchId",
+  authorizeRoles(USER_ROLES.ADMIN),
+  validateRequest(matchIdSchema),
+  asyncHandler(deleteRejectedMatch),
 );
 
 matchRouter.get(
@@ -130,23 +150,27 @@ matchRouter.get(
   validateRequest(listMatchRevisionsSchema),
   asyncHandler(listMatchRevisions),
 );
+
 matchRouter.get(
   "/:matchId/revisions/:revisionNumber",
   validateRequest(matchRevisionIdSchema),
   asyncHandler(getMatchRevision),
 );
+
 matchRouter.post(
   "/:matchId/revisions",
   authorizeRoles(USER_ROLES.ADMIN),
   validateRequest(proposeMatchRevisionSchema),
   asyncHandler(proposeMatchRevision),
 );
+
 matchRouter.post(
   "/:matchId/revisions/:revisionNumber/approve",
   authorizeRoles(USER_ROLES.ADMIN),
   validateRequest(approveMatchRevisionSchema),
   asyncHandler(approveMatchRevision),
 );
+
 matchRouter.post(
   "/:matchId/revisions/:revisionNumber/reject",
   authorizeRoles(USER_ROLES.ADMIN),

@@ -689,6 +689,118 @@ export function createMatchService({
       };
     },
 
+    async deleteRejected({ actor, matchId, requestMeta }) {
+      const session = await mongoose.startSession();
+
+      let deletedMatch = null;
+      let screenshotPublicId = null;
+
+      try {
+        await session.withTransaction(async () => {
+          const match = await MatchModel.findById(matchId).session(session);
+
+          if (!match) {
+            throw notFound();
+          }
+
+          if (match.status !== "rejected") {
+            throw new AppError({
+              statusCode: 409,
+              code: "MATCH_NOT_REJECTED",
+              message: "Only rejected matches can be deleted.",
+            });
+          }
+
+          screenshotPublicId = match.screenshot?.publicId ?? null;
+
+          const deletedResults = await MatchResultModel.deleteMany({
+            matchId: match._id,
+          }).session(session);
+
+          const deletedOCRJobs = await OCRJobModel.deleteMany({
+            matchId: match._id,
+          }).session(session);
+
+          await AuditLogModel.create(
+            [
+              {
+                ...auditMeta(actor, requestMeta),
+                action: "match.deleted",
+                entityType: "match",
+                entityId: String(match._id),
+                previousValue: {
+                  matchCode: match.matchCode,
+                  status: match.status,
+                  screenshotPublicId,
+                  ocrJobId: match.ocrJobId ? String(match.ocrJobId) : null,
+                  resultCount: match.resultCount,
+                  rejectedBy: match.verification?.rejectedBy ?? null,
+                  rejectedAt: match.verification?.rejectedAt ?? null,
+                  rejectionReason: match.verification?.rejectionReason ?? null,
+                },
+                newValue: {
+                  deleted: true,
+                  deletedResultCount: deletedResults.deletedCount ?? 0,
+                  deletedOCRJobCount: deletedOCRJobs.deletedCount ?? 0,
+                },
+                reason: "Rejected match permanently deleted by admin.",
+              },
+            ],
+            { session },
+          );
+
+          const deletionResult = await MatchModel.deleteOne({
+            _id: match._id,
+            status: "rejected",
+          }).session(session);
+
+          if (deletionResult.deletedCount !== 1) {
+            throw new AppError({
+              statusCode: 409,
+              code: "MATCH_DELETE_CONFLICT",
+              message: "The match could not be deleted because its status changed.",
+            });
+          }
+
+          deletedMatch = {
+            matchId: String(match._id),
+            matchCode: match.matchCode,
+            previousStatus: match.status,
+            deletedResultCount: deletedResults.deletedCount ?? 0,
+            deletedOCRJobCount: deletedOCRJobs.deletedCount ?? 0,
+          };
+        });
+      } finally {
+        await session.endSession();
+      }
+
+      let screenshotDeletion = {
+        status: "skipped",
+        publicId: null,
+      };
+
+      if (screenshotPublicId) {
+        try {
+          await imageService.deleteImage(screenshotPublicId);
+
+          screenshotDeletion = {
+            status: "completed",
+            publicId: screenshotPublicId,
+          };
+        } catch {
+          screenshotDeletion = {
+            status: "failed",
+            publicId: screenshotPublicId,
+            errorCode: "MATCH_SCREENSHOT_DELETE_FAILED",
+          };
+        }
+      }
+
+      return {
+        ...deletedMatch,
+        screenshotDeletion,
+      };
+    },
     async reject({ actor, matchId, reason, requestMeta }) {
       const match = await MatchModel.findById(matchId);
       if (!match) throw notFound();
