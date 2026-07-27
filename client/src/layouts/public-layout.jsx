@@ -5,6 +5,7 @@ import { Link, NavLink, Outlet } from "react-router-dom";
 import { AppLogo } from "@/components/brand/app-logo.jsx";
 import { ThemeToggle } from "@/components/ui/theme-toggle.jsx";
 import { AuthNavigation } from "@/features/auth/components/auth-navigation.jsx";
+import { authClient } from "@/lib/auth-client.js";
 
 const publicLinks = [
   { label: "Home", to: "/" },
@@ -18,6 +19,13 @@ const publicLinks = [
   { label: "Achievements", to: "/achievements" },
   { label: "Rivalries", to: "/rivalries" },
   { label: "Challenges", to: "/challenges" },
+
+  {
+    label: "Upload match",
+    to: "/admin/uploads",
+    adminOnly: true,
+  },
+
   { label: "Matches", to: "/matches" },
   { label: "Hall of Fame", to: "/hall-of-fame" },
   { label: "Seasons", to: "/seasons" },
@@ -45,6 +53,11 @@ function getMobileLinkClass({ isActive }) {
 
 export function PublicLayout() {
   const [isOpen, setIsOpen] = useState(false);
+  const session = authClient.useSession();
+
+  const isAdmin = session.data?.user?.role === "admin";
+
+  const visiblePublicLinks = publicLinks.filter((item) => !item.adminOnly || isAdmin);
 
   function closeNavigation() {
     setIsOpen(false);
@@ -58,7 +71,6 @@ export function PublicLayout() {
             <AppLogo />
           </div>
 
-          {/* Important navigation visible on laptop and desktop */}
           <nav
             className="ml-auto hidden shrink-0 items-center gap-1 xl:flex"
             aria-label="Priority navigation"
@@ -70,7 +82,6 @@ export function PublicLayout() {
             ))}
           </nav>
 
-          {/* Dashboard, Account and Sign in/Sign out */}
           <div className="hidden shrink-0 items-center xl:flex">
             <AuthNavigation />
           </div>
@@ -78,7 +89,6 @@ export function PublicLayout() {
           <div className="flex shrink-0 items-center gap-2 max-xl:ml-auto">
             <ThemeToggle />
 
-            {/* Menu button remains visible on laptop and desktop */}
             <button
               type="button"
               onClick={() => setIsOpen((value) => !value)}
@@ -96,7 +106,6 @@ export function PublicLayout() {
           </div>
         </div>
 
-        {/* Navigation dropdown for every screen size */}
         {isOpen ? (
           <div
             id="responsive-public-navigation"
@@ -107,29 +116,19 @@ export function PublicLayout() {
                 className="grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
                 aria-label="Responsive public navigation"
               >
-                {publicLinks.map((item) =>
-                  item.disabled ? (
-                    <span
-                      key={item.label}
-                      className="cursor-not-allowed rounded-xl px-3 py-2.5 text-sm font-bold text-slate-400"
-                    >
-                      {item.label} · Soon
-                    </span>
-                  ) : (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      end={item.to === "/"}
-                      onClick={closeNavigation}
-                      className={getMobileLinkClass}
-                    >
-                      {item.label}
-                    </NavLink>
-                  ),
-                )}
+                {visiblePublicLinks.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.to === "/"}
+                    onClick={closeNavigation}
+                    className={getMobileLinkClass}
+                  >
+                    {item.label}
+                  </NavLink>
+                ))}
               </nav>
 
-              {/* Authentication appears inside menu below laptop width */}
               <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800 xl:hidden">
                 <AuthNavigation />
               </div>
