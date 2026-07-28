@@ -88,8 +88,8 @@ Placements are calculated from kills in descending order.
 
 Players with equal kills receive the same placement. Deaths do not break ties.
 
-Kills:       21, 21, 18, 12
-Placement:    1,  1,  2,  3
+Kills: 21, 21, 18, 12
+Placement: 1, 1, 2, 3
 
 Key Features
 
@@ -352,27 +352,27 @@ Cloudinary for image storage
 System Architecture
 
 flowchart LR
-    Browser[Browser] --> Client[React Client on Vercel]
-    Client --> API[Express API on Render]
-    API --> Auth[Better Auth]
-    API --> MongoDB[(MongoDB Atlas)]
-    API --> Cloudinary[Cloudinary]
-    API --> Gemini[Gemini OCR]
-    API --> Paddle[PaddleOCR FastAPI on Render]
-    Gemini --> Review[Match Review Workflow]
-    Paddle --> Review
-    Review --> Verify[Verification and Dense Ranking]
-    Verify --> Stats[Statistics and League Automation]
+Browser[Browser] --> Client[React Client on Vercel]
+Client --> API[Express API on Render]
+API --> Auth[Better Auth]
+API --> MongoDB[(MongoDB Atlas)]
+API --> Cloudinary[Cloudinary]
+API --> Gemini[Gemini OCR]
+API --> Paddle[PaddleOCR FastAPI on Render]
+Gemini --> Review[Match Review Workflow]
+Paddle --> Review
+Review --> Verify[Verification and Dense Ranking]
+Verify --> Stats[Statistics and League Automation]
 
 Repository Structure
 
 mini-militia-league/
-├── client/                     # React and Vite frontend
-├── server/                     # Express and MongoDB backend
-├── ocr-service/                # PaddleOCR fallback service
-├── shared/                     # Shared workspace utilities and schemas
-├── scripts/                    # QA and deployment scripts
-├── docs/                       # OpenAPI and project documentation
+├── client/ # React and Vite frontend
+├── server/ # Express and MongoDB backend
+├── ocr-service/ # PaddleOCR fallback service
+├── shared/ # Shared workspace utilities and schemas
+├── scripts/ # QA and deployment scripts
+├── docs/ # OpenAPI and project documentation
 ├── render.yaml
 ├── vercel.json
 ├── package.json
