@@ -14,7 +14,7 @@ const playerCode = z
   .trim()
   .toUpperCase()
   .regex(/^MM\d{3,}$/, "Player ID must use the MM001 format.");
-const periodType = z.enum(["weekly", "monthly", "season", "all_time"]);
+const periodType = z.enum(["daily", "weekly", "monthly", "season", "all_time"]);
 
 export const leaderboardSchema = z.object({
   body: z.object({}).strict(),
@@ -44,7 +44,7 @@ export const leaderboardSchema = z.object({
 
 export const periodAnalyticsSchema = z.object({
   body: z.object({}).strict(),
-  params: z.object({ periodType: z.enum(["weekly", "monthly"]) }).strict(),
+  params: z.object({ periodType: z.enum(["daily", "weekly", "monthly"]) }).strict(),
   query: z
     .object({
       date: isoDate,

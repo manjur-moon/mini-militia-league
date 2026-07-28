@@ -38,7 +38,13 @@ export const PLAYER_MATCH_STATUSES = Object.freeze([
 ]);
 export const OCR_COLUMN_KEYS = Object.freeze(["placement", "name", "kills", "deaths"]);
 
-export const PERIOD_TYPES = Object.freeze(["weekly", "monthly", "season", "all_time"]);
+export const PERIOD_TYPES = Object.freeze([
+  "daily",
+  "weekly",
+  "monthly",
+  "season",
+  "all_time",
+]);
 export const SEASON_STATUSES = Object.freeze([
   "draft",
   "upcoming",

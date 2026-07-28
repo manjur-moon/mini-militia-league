@@ -29,6 +29,7 @@ import { mvpConfigService } from "./mvp-config.service.js";
 import {
   formatLeagueDateKey,
   resolveAllTimePeriod,
+  resolveDailyPeriod,
   resolveMonthlyPeriod,
   resolveSeasonPeriod,
   resolveWeeklyPeriod,
@@ -45,7 +46,13 @@ const LEADERBOARD_METRICS = new Set([
   "win_rate",
   "average_rank",
 ]);
-const CACHEABLE_PERIOD_TYPES = new Set(["weekly", "monthly", "season", "all_time"]);
+const CACHEABLE_PERIOD_TYPES = new Set([
+  "daily",
+  "weekly",
+  "monthly",
+  "season",
+  "all_time",
+]);
 const BASE_METRIC_KEYS = [
   "matchesPlayed",
   "totalKills",
@@ -83,6 +90,7 @@ function serializePeriod(period) {
     startAt: period.startAt,
     endAt: period.endAt,
     timezone: period.timezone,
+    dayStartHour: period.dayStartHour ?? null,
     seasonId: period.seasonId ? String(period.seasonId) : null,
   };
 }
@@ -101,7 +109,11 @@ function baseMetrics(metrics) {
   return Object.fromEntries(BASE_METRIC_KEYS.map((key) => [key, metrics[key] ?? 0]));
 }
 
-function minimumMatchesForMetric(metric, defaultMinimum) {
+function minimumMatchesForMetric(metric, defaultMinimum, periodType) {
+  if (periodType === "daily") {
+    return 1;
+  }
+
   return new Set(["overall", "kdr", "win_rate", "average_rank"]).has(metric)
     ? defaultMinimum
     : 1;
@@ -134,12 +146,21 @@ export function createAnalyticsService({
   AuditLogModel = AuditLog,
 } = {}) {
   async function getLeagueSettings() {
-    const config = await LeagueConfigModel.findOne({ key: "primary" })
-      .select({ timezone: 1, weekStartsOn: 1 })
+    const config = await LeagueConfigModel.findOne({
+      key: "primary",
+    })
+      .select({
+        timezone: 1,
+        weekStartsOn: 1,
+      })
       .lean();
+
     return {
       timezone: config?.timezone ?? env.LEAGUE_TIMEZONE,
+
       weekStartsOn: config?.weekStartsOn ?? 1,
+
+      dayStartHour: env.LEAGUE_DAY_START_HOUR,
     };
   }
 
@@ -152,6 +173,14 @@ export function createAnalyticsService({
       });
     }
     const settings = await getLeagueSettings();
+    if (periodType === "daily") {
+      return resolveDailyPeriod({
+        date,
+        timezone: settings.timezone,
+        dayStartHour: settings.dayStartHour,
+      });
+    }
+
     if (periodType === "weekly") {
       return resolveWeeklyPeriod({
         date,
@@ -295,35 +324,54 @@ export function createAnalyticsService({
     return new Map(players.map((player) => [String(player._id), player]));
   }
 
-  function calculateEntries(rows, config, previousEntries = new Map()) {
+  function calculateEntries(
+    rows,
+    config,
+    previousEntries = new Map(),
+    minimumMatches = config.minimumMatches,
+  ) {
     const grouped = new Map();
+
     for (const row of rows) {
       const playerId = String(row.playerId);
-      if (!grouped.has(playerId)) grouped.set(playerId, []);
+
+      if (!grouped.has(playerId)) {
+        grouped.set(playerId, []);
+      }
+
       grouped.get(playerId).push(row);
     }
 
     const entries = [...grouped.entries()].map(([playerId, playerRows]) => {
       const metrics = enrichPeriodMetrics(playerRows);
+
       const breakdown = calculateMvpScoreBreakdown(metrics, config);
+
       const previous = previousEntries.get(playerId) ?? null;
-      const minimumMatchesMet = metrics.matchesPlayed >= config.minimumMatches;
-      const previousMinimumMet =
-        previous?.metrics?.matchesPlayed >= config.minimumMatches;
+
+      const minimumMatchesMet = metrics.matchesPlayed >= minimumMatches;
+
+      const previousMinimumMet = previous?.metrics?.matchesPlayed >= minimumMatches;
+
       return {
         playerId,
         metrics,
         performanceScore: breakdown.totalScore,
         scoreBreakdown: breakdown,
+
         previousPerformanceScore: previous?.performanceScore ?? null,
+
         previousPeriodRank: previous?.rank ?? null,
+
         improvementRate:
           minimumMatchesMet && previousMinimumMet
             ? calculateImprovementRate(
                 breakdown.totalScore / metrics.matchesPlayed,
+
                 previous.performanceScore / previous.metrics.matchesPlayed,
               )
             : null,
+
         minimumMatchesMet,
       };
     });
@@ -331,7 +379,9 @@ export function createAnalyticsService({
     const eligible = rankPeriodicEntries(
       entries.filter((entry) => entry.minimumMatchesMet),
     );
+
     const rankMap = new Map(eligible.map((entry) => [entry.playerId, entry.rank]));
+
     return entries.map((entry) => ({
       ...entry,
       rank: rankMap.get(entry.playerId) ?? null,
@@ -462,7 +512,14 @@ export function createAnalyticsService({
     }
 
     const rows = await fetchVerifiedRows(period);
-    const calculated = calculateEntries(rows, config, previousMap);
+    const periodMinimumMatches = period.type === "daily" ? 1 : config.minimumMatches;
+
+    const calculated = calculateEntries(
+      rows,
+      config,
+      previousMap,
+      periodMinimumMatches,
+    );
     await persistPeriodEntries(period, calculated, sourceDataHash);
     const players = await loadPlayers(
       calculated.map((entry) => new mongoose.Types.ObjectId(entry.playerId)),
@@ -505,6 +562,7 @@ export function createAnalyticsService({
     const minimumMatches = minimumMatchesForMetric(
       metric,
       result.config.minimumMatches,
+      period.type,
     );
     const eligible = result.entries.filter(
       (entry) => entry.metrics.matchesPlayed >= minimumMatches,
@@ -751,7 +809,11 @@ export function createAnalyticsService({
     const weekly = new Map();
     const monthly = new Map();
     for (const row of scored) {
-      const dayKey = formatLeagueDateKey(row.matchDate, settings.timezone);
+      const dayKey = formatLeagueDateKey(
+        row.matchDate,
+        settings.timezone,
+        settings.dayStartHour,
+      );
       daily.set(dayKey, (daily.get(dayKey) ?? 0) + 1);
       const week = resolveWeeklyPeriod({
         date: row.matchDate,

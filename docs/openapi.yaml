@@ -2708,7 +2708,10 @@ paths:
           required: false
           schema:
             type: string
-          description: periodType?:weekly|monthly|season|all_time, seasonId?, date?
+          description: >-
+            periodType?:daily|weekly|monthly|season|all_time, seasonId?, date?;
+            daily periods use the configured league timezone and run from
+            LEAGUE_DAY_START_HOUR to the same hour on the following day.
       responses:
         "200":
           description: 200 — totals, averages, records and source metadata.
@@ -2777,16 +2780,18 @@ paths:
               type: object
               description: scope:player|match|period|season|all, playerId?, matchId?, period?, seasonId?, reason:string
               additionalProperties: true
-  /api/v1/leaderboards:
+  /api/v1/analytics/leaderboards:
     get:
       tags:
         - Leaderboards
       summary: Return one validated leaderboard.
-      operationId: getV1Leaderboards
+      operationId: getV1AnalyticsLeaderboards
       description: "Access: Public
 
 
-        Validation: Metric/period compatibility; minimum-match rules; limit<=100.
+        Validation: Metric/period compatibility; daily date normalized in the league timezone;
+        daily boundary uses the configured rollover hour; daily minimum is one verified match;
+        limit<=100.
 
 
         Security notes: Snapshot/cache preferred; verified data only; deterministic tie-break."
@@ -2797,12 +2802,18 @@ paths:
           required: false
           schema:
             type: string
-          description:
-            periodType:weekly|monthly|season|all_time, metric:totalKills|totalDeaths|kdr|activity|firstPlaces|lastPlaces|overallRating|mvpScore,
-            startDate?, endDate?, seasonId?, page, limit
+          description: >-
+            periodType:daily|weekly|monthly|season|all_time,
+            metric:overall|kills|deaths|kdr|activity|first_places|last_places|win_rate|average_rank,
+            date?:YYYY-MM-DD, seasonId?, page, limit. Daily periods run from the
+            configured LEAGUE_DAY_START_HOUR to the same hour on the following day;
+            the end boundary is exclusive and daily eligibility requires one verified match.
       responses:
         "200":
-          description: 200 — ranked entries, tie-break rules, formula/source version and pagination.
+          description: >-
+            200 — ranked entries, period metadata, timezone, daily rollover hour,
+            minimum-match rules, deterministic tie-break rules, formula/source version
+            and pagination.
           content:
             application/json:
               schema:

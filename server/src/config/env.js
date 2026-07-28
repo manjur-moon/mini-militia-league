@@ -89,6 +89,7 @@ const envSchema = z
     API_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(300),
 
     LEAGUE_TIMEZONE: z.string().min(1).default("Asia/Dhaka"),
+    LEAGUE_DAY_START_HOUR: z.coerce.number().int().min(0).max(23).default(7),
 
     CLOUDINARY_CLOUD_NAME: optionalNonEmptyString,
 
