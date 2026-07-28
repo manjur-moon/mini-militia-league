@@ -4,7 +4,13 @@ Mini Militia League
 
 A production-oriented MERN league management and analytics platform for verified Mini Militia matches, OCR-assisted score extraction, player rankings, achievements, challenges, rivalries, seasons, Hall of Fame records, and role-based dashboards.
 
-Live Website · Live API · Repository
+## Live Links
+
+- **Live Website:** [Open Application](https://mini-militia-league-client.vercel.app)
+- **Live API:** [Open API](https://mini-militia-league.onrender.com)
+- **API Health Check:** [Check API Health](https://mini-militia-league.onrender.com/api/v1/health)
+- **GitHub Repository:** [View Source Code](https://github.com/manjur-moon/mini-militia-league)
+- **PaddleOCR Service:** [OCR Health Check](https://mini-militia-paddle-ocr.onrender.com/health)
 
 </div>
 
