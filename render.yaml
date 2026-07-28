@@ -48,7 +48,7 @@ services:
       - key: LEAGUE_TIMEZONE
         value: Asia/Dhaka
       - key: LEAGUE_DAY_START_HOUR
-        value: "7"  
+        value: "7"
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY
