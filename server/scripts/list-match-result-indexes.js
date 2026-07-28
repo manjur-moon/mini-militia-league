@@ -18,8 +18,7 @@ async function main() {
         name: index.name,
         key: index.key,
         unique: Boolean(index.unique),
-        partialFilterExpression:
-          index.partialFilterExpression ?? null,
+        partialFilterExpression: index.partialFilterExpression ?? null,
       },
       {
         depth: null,

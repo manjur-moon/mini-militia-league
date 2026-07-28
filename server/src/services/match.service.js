@@ -20,10 +20,7 @@ import { notificationService } from "./notification.service.js";
 import { ocrProcessingService } from "./ocr/ocr-processing.service.js";
 import { rivalryService } from "./rivalry.service.js";
 import { seasonService } from "./season.service.js";
-import {
-  CORE_STATISTICS_VERSION,
-  statisticsService,
-} from "./statistics.service.js";
+import { CORE_STATISTICS_VERSION, statisticsService } from "./statistics.service.js";
 
 function notFound() {
   return new AppError({
@@ -34,8 +31,7 @@ function notFound() {
 }
 
 function serializeMatch(value) {
-  const match =
-    typeof value?.toObject === "function" ? value.toObject() : value;
+  const match = typeof value?.toObject === "function" ? value.toObject() : value;
 
   if (!match) {
     return null;
@@ -49,8 +45,7 @@ function serializeMatch(value) {
 }
 
 function serializeResult(value) {
-  const result =
-    typeof value?.toObject === "function" ? value.toObject() : value;
+  const result = typeof value?.toObject === "function" ? value.toObject() : value;
 
   return {
     ...result,
@@ -93,9 +88,7 @@ export function createMatchService({
 } = {}) {
   return Object.freeze({
     async upload({ actor, input, file, requestMeta }) {
-      const sha256 = createHash("sha256")
-        .update(file.buffer)
-        .digest("hex");
+      const sha256 = createHash("sha256").update(file.buffer).digest("hex");
 
       const duplicate = await MatchModel.findOne({
         "screenshot.sha256": sha256,
@@ -191,9 +184,7 @@ export function createMatchService({
           },
         };
       } catch (error) {
-        await imageService
-          .deleteImage(asset.publicId)
-          .catch(() => undefined);
+        await imageService.deleteImage(asset.publicId).catch(() => undefined);
 
         if (match?._id) {
           await MatchModel.deleteOne({
@@ -393,8 +384,7 @@ export function createMatchService({
         throw new AppError({
           statusCode: 409,
           code: "MATCH_LOCKED",
-          message:
-            "A verified or rejected match cannot be edited here.",
+          message: "A verified or rejected match cannot be edited here.",
         });
       }
 
@@ -402,18 +392,13 @@ export function createMatchService({
         throw new AppError({
           statusCode: 422,
           code: "PARTICIPANT_COUNT_MISMATCH",
-          message:
-            "Participant count must equal the number of included result rows.",
+          message: "Participant count must equal the number of included result rows.",
         });
       }
 
       const rankedRows = assignDenseKillPlacements(input.rows);
 
-      const playerIds = [
-        ...new Set(
-          rankedRows.map((row) => String(row.playerId)),
-        ),
-      ];
+      const playerIds = [...new Set(rankedRows.map((row) => String(row.playerId)))];
 
       const players = await PlayerModel.find({
         _id: {
@@ -433,37 +418,22 @@ export function createMatchService({
         throw new AppError({
           statusCode: 422,
           code: "DUPLICATE_MATCH_PLAYER",
-          message:
-            "Each registered player must appear only once within a match.",
+          message: "Each registered player must appear only once within a match.",
         });
       }
 
-      const playerMap = new Map(
-        players.map((player) => [
-          String(player._id),
-          player,
-        ]),
-      );
+      const playerMap = new Map(players.map((player) => [String(player._id), player]));
 
       const existing = await MatchResultModel.find({
         matchId,
       });
 
-      const byId = new Map(
-        existing.map((row) => [
-          String(row._id),
-          row,
-        ]),
-      );
+      const byId = new Map(existing.map((row) => [String(row._id), row]));
 
       const now = new Date();
 
       let nextRowIndex =
-        existing.reduce(
-          (maximum, row) =>
-            Math.max(maximum, row.rowIndex),
-          -1,
-        ) + 1;
+        existing.reduce((maximum, row) => Math.max(maximum, row.rowIndex), -1) + 1;
 
       const includedIds = new Set();
 
@@ -477,8 +447,7 @@ export function createMatchService({
             throw new AppError({
               statusCode: 422,
               code: "MATCH_RESULT_NOT_FOUND",
-              message:
-                "A reviewed result row does not belong to this match.",
+              message: "A reviewed result row does not belong to this match.",
             });
           }
 
@@ -550,8 +519,7 @@ export function createMatchService({
       for (const document of existing) {
         if (!includedIds.has(String(document._id))) {
           document.status = "rejected";
-          document.rejectedReason =
-            "Excluded during moderator review";
+          document.rejectedReason = "Excluded during moderator review";
 
           await document.save();
         }
@@ -595,8 +563,7 @@ export function createMatchService({
 
       try {
         await session.withTransaction(async () => {
-          const match =
-            await MatchModel.findById(matchId).session(session);
+          const match = await MatchModel.findById(matchId).session(session);
 
           if (!match) {
             throw notFound();
@@ -610,12 +577,11 @@ export function createMatchService({
             });
           }
 
-          const assignedSeason =
-            await seasonManager.resolveForMatch({
-              matchDate: match.matchDate,
-              requestedSeasonId: match.seasonId ?? null,
-              session,
-            });
+          const assignedSeason = await seasonManager.resolveForMatch({
+            matchDate: match.matchDate,
+            requestedSeasonId: match.seasonId ?? null,
+            session,
+          });
 
           match.seasonId = assignedSeason?._id ?? null;
 
@@ -624,87 +590,70 @@ export function createMatchService({
             status: "pending",
           }).session(session);
 
-          if (
-            results.length !== match.participantCount ||
-            !results.length
-          ) {
+          if (results.length !== match.participantCount || !results.length) {
             throw new AppError({
               statusCode: 422,
               code: "MATCH_RESULTS_INCOMPLETE",
-              message:
-                "All participant rows must be reviewed before verification.",
+              message: "All participant rows must be reviewed before verification.",
             });
           }
 
-          if (
-            results.some(
-              (result) => !result.corrected?.playerId,
-            )
-          ) {
+          if (results.some((result) => !result.corrected?.playerId)) {
             throw new AppError({
               statusCode: 422,
               code: "PLAYER_MATCH_INCOMPLETE",
-              message:
-                "Every result row must be linked to a registered player.",
+              message: "Every result row must be linked to a registered player.",
             });
           }
 
           const rankedResults = assignDenseKillPlacements(
             results.map((result) => ({
               result,
-              playerId: String(
-                result.corrected.playerId,
-              ),
+              playerId: String(result.corrected.playerId),
               kills: result.corrected.kills,
               deaths: result.corrected.deaths,
             })),
           );
 
-          const players = rankedResults.map(
-            (row) => row.playerId,
-          );
+          const players = rankedResults.map((row) => row.playerId);
 
           if (new Set(players).size !== players.length) {
             throw new AppError({
               statusCode: 422,
               code: "DUPLICATE_MATCH_PLAYER",
-              message:
-                "Each registered player must appear only once in a match.",
+              message: "Each registered player must appear only once in a match.",
             });
           }
 
           const now = new Date();
 
           await MatchResultModel.bulkWrite(
-            rankedResults.map(
-              ({ result: row, placement }) => ({
-                updateOne: {
-                  filter: {
-                    _id: row._id,
-                  },
-                  update: {
-                    $set: {
-                      status: "verified",
-                      "corrected.placement": placement,
-                      official: {
-                        playerId: row.corrected.playerId,
-                        playerName:
-                          row.corrected.playerName,
-                        kills: row.corrected.kills,
-                        deaths: row.corrected.deaths,
-                        placement,
-                        verifiedBy: actor.id,
-                        verifiedAt: now,
-                        lastCorrectedBy: null,
-                        lastCorrectedAt: null,
-                      },
-                      officialMatchDate: match.matchDate,
-                      officialSeasonId: match.seasonId,
+            rankedResults.map(({ result: row, placement }) => ({
+              updateOne: {
+                filter: {
+                  _id: row._id,
+                },
+                update: {
+                  $set: {
+                    status: "verified",
+                    "corrected.placement": placement,
+                    official: {
+                      playerId: row.corrected.playerId,
+                      playerName: row.corrected.playerName,
+                      kills: row.corrected.kills,
+                      deaths: row.corrected.deaths,
+                      placement,
+                      verifiedBy: actor.id,
+                      verifiedAt: now,
+                      lastCorrectedBy: null,
+                      lastCorrectedAt: null,
                     },
+                    officialMatchDate: match.matchDate,
+                    officialSeasonId: match.seasonId,
                   },
                 },
-              }),
-            ),
+              },
+            })),
             {
               session,
             },
@@ -714,10 +663,7 @@ export function createMatchService({
           match.verification.verifiedBy = actor.id;
           match.verification.verifiedAt = now;
           match.verifiedResultCount = rankedResults.length;
-          match.currentRevision = Math.max(
-            1,
-            match.currentRevision,
-          );
+          match.currentRevision = Math.max(1, match.currentRevision);
 
           match.statisticsRecalculation = {
             status: "pending",
@@ -799,10 +745,7 @@ export function createMatchService({
       let recalculation;
 
       try {
-        recalculation =
-          await statsService.recalculateForPlayerIds(
-            affectedPlayerIds,
-          );
+        recalculation = await statsService.recalculateForPlayerIds(affectedPlayerIds);
 
         await MatchModel.updateOne(
           {
@@ -811,8 +754,7 @@ export function createMatchService({
           {
             $set: {
               "statisticsRecalculation.status": "completed",
-              "statisticsRecalculation.calculationVersion":
-                CORE_STATISTICS_VERSION,
+              "statisticsRecalculation.calculationVersion": CORE_STATISTICS_VERSION,
               "statisticsRecalculation.completedAt": new Date(),
               "statisticsRecalculation.errorCode": null,
             },
@@ -838,8 +780,7 @@ export function createMatchService({
           {
             $set: {
               "statisticsRecalculation.status": "failed",
-              "statisticsRecalculation.errorCode":
-                "STATISTICS_RECALCULATION_FAILED",
+              "statisticsRecalculation.errorCode": "STATISTICS_RECALCULATION_FAILED",
             },
           },
         );
@@ -858,15 +799,14 @@ export function createMatchService({
 
       if (recalculation.status !== "failed") {
         try {
-          const result =
-            await achievementEvaluator.evaluatePlayerIds(
-              affectedPlayerIds,
-              {
-                actor,
-                reason: `Automatically evaluate achievements after verifying match ${verifiedMatch.matchCode}.`,
-                requestMeta,
-              },
-            );
+          const result = await achievementEvaluator.evaluatePlayerIds(
+            affectedPlayerIds,
+            {
+              actor,
+              reason: `Automatically evaluate achievements after verifying match ${verifiedMatch.matchCode}.`,
+              requestMeta,
+            },
+          );
 
           achievementEvaluation = {
             status: "completed",
@@ -908,16 +848,12 @@ export function createMatchService({
 
       if (recalculation.status !== "failed") {
         try {
-          const result =
-            await challengeEvaluator.evaluatePlayerIds(
-              affectedPlayerIds,
-              {
-                actor,
-                date: verifiedMatch.matchDate,
-                reason: `Automatically update challenges after verifying match ${verifiedMatch.matchCode}.`,
-                requestMeta,
-              },
-            );
+          const result = await challengeEvaluator.evaluatePlayerIds(affectedPlayerIds, {
+            actor,
+            date: verifiedMatch.matchDate,
+            reason: `Automatically update challenges after verifying match ${verifiedMatch.matchCode}.`,
+            requestMeta,
+          });
 
           challengeEvaluation = {
             status: "completed",
@@ -949,8 +885,7 @@ export function createMatchService({
         } catch {
           hallOfFameRecalculation = {
             status: "failed",
-            errorCode:
-              "HALL_OF_FAME_RECALCULATION_FAILED",
+            errorCode: "HALL_OF_FAME_RECALCULATION_FAILED",
           };
         }
       }
@@ -966,11 +901,7 @@ export function createMatchService({
       };
     },
 
-    async deleteRejected({
-      actor,
-      matchId,
-      requestMeta,
-    }) {
+    async deleteRejected({ actor, matchId, requestMeta }) {
       const session = await mongoose.startSession();
 
       let deletedMatch = null;
@@ -978,8 +909,7 @@ export function createMatchService({
 
       try {
         await session.withTransaction(async () => {
-          const match =
-            await MatchModel.findById(matchId).session(session);
+          const match = await MatchModel.findById(matchId).session(session);
 
           if (!match) {
             throw notFound();
@@ -989,23 +919,19 @@ export function createMatchService({
             throw new AppError({
               statusCode: 409,
               code: "MATCH_NOT_REJECTED",
-              message:
-                "Only rejected matches can be deleted.",
+              message: "Only rejected matches can be deleted.",
             });
           }
 
-          screenshotPublicId =
-            match.screenshot?.publicId ?? null;
+          screenshotPublicId = match.screenshot?.publicId ?? null;
 
-          const deletedResults =
-            await MatchResultModel.deleteMany({
-              matchId: match._id,
-            }).session(session);
+          const deletedResults = await MatchResultModel.deleteMany({
+            matchId: match._id,
+          }).session(session);
 
-          const deletedOCRJobs =
-            await OCRJobModel.deleteMany({
-              matchId: match._id,
-            }).session(session);
+          const deletedOCRJobs = await OCRJobModel.deleteMany({
+            matchId: match._id,
+          }).session(session);
 
           await AuditLogModel.create(
             [
@@ -1018,27 +944,18 @@ export function createMatchService({
                   matchCode: match.matchCode,
                   status: match.status,
                   screenshotPublicId,
-                  ocrJobId: match.ocrJobId
-                    ? String(match.ocrJobId)
-                    : null,
+                  ocrJobId: match.ocrJobId ? String(match.ocrJobId) : null,
                   resultCount: match.resultCount,
-                  rejectedBy:
-                    match.verification?.rejectedBy ?? null,
-                  rejectedAt:
-                    match.verification?.rejectedAt ?? null,
-                  rejectionReason:
-                    match.verification?.rejectionReason ??
-                    null,
+                  rejectedBy: match.verification?.rejectedBy ?? null,
+                  rejectedAt: match.verification?.rejectedAt ?? null,
+                  rejectionReason: match.verification?.rejectionReason ?? null,
                 },
                 newValue: {
                   deleted: true,
-                  deletedResultCount:
-                    deletedResults.deletedCount ?? 0,
-                  deletedOCRJobCount:
-                    deletedOCRJobs.deletedCount ?? 0,
+                  deletedResultCount: deletedResults.deletedCount ?? 0,
+                  deletedOCRJobCount: deletedOCRJobs.deletedCount ?? 0,
                 },
-                reason:
-                  "Rejected match permanently deleted by admin.",
+                reason: "Rejected match permanently deleted by admin.",
               },
             ],
             {
@@ -1046,18 +963,16 @@ export function createMatchService({
             },
           );
 
-          const deletionResult =
-            await MatchModel.deleteOne({
-              _id: match._id,
-              status: "rejected",
-            }).session(session);
+          const deletionResult = await MatchModel.deleteOne({
+            _id: match._id,
+            status: "rejected",
+          }).session(session);
 
           if (deletionResult.deletedCount !== 1) {
             throw new AppError({
               statusCode: 409,
               code: "MATCH_DELETE_CONFLICT",
-              message:
-                "The match could not be deleted because its status changed.",
+              message: "The match could not be deleted because its status changed.",
             });
           }
 
@@ -1065,10 +980,8 @@ export function createMatchService({
             matchId: String(match._id),
             matchCode: match.matchCode,
             previousStatus: match.status,
-            deletedResultCount:
-              deletedResults.deletedCount ?? 0,
-            deletedOCRJobCount:
-              deletedOCRJobs.deletedCount ?? 0,
+            deletedResultCount: deletedResults.deletedCount ?? 0,
+            deletedOCRJobCount: deletedOCRJobs.deletedCount ?? 0,
           };
         });
       } finally {
@@ -1092,8 +1005,7 @@ export function createMatchService({
           screenshotDeletion = {
             status: "failed",
             publicId: screenshotPublicId,
-            errorCode:
-              "MATCH_SCREENSHOT_DELETE_FAILED",
+            errorCode: "MATCH_SCREENSHOT_DELETE_FAILED",
           };
         }
       }
@@ -1115,8 +1027,7 @@ export function createMatchService({
         throw new AppError({
           statusCode: 409,
           code: "VERIFIED_MATCH_REQUIRES_REVISION",
-          message:
-            "Verified matches require the controlled correction workflow.",
+          message: "Verified matches require the controlled correction workflow.",
         });
       }
 
@@ -1174,24 +1085,21 @@ export function createMatchService({
       });
 
       await notificationDelivery
-        .createForLinkedPlayers(
-          rejectedPlayerIds,
-          (player) => ({
-            type: "match_rejected",
-            title: `Match rejected: ${match.matchCode}`,
-            message: `${player.name}'s submitted match result was rejected after review.`,
-            relatedEntity: {
-              entityType: "match",
-              entityId: String(match._id),
-            },
-            actionUrl: `/matches/${String(match._id)}`,
-            data: {
-              matchId: String(match._id),
-              matchCode: match.matchCode,
-            },
-            deduplicationKey: `match-rejected:${String(match._id)}:${player.linkedUserId}`,
-          }),
-        )
+        .createForLinkedPlayers(rejectedPlayerIds, (player) => ({
+          type: "match_rejected",
+          title: `Match rejected: ${match.matchCode}`,
+          message: `${player.name}'s submitted match result was rejected after review.`,
+          relatedEntity: {
+            entityType: "match",
+            entityId: String(match._id),
+          },
+          actionUrl: `/matches/${String(match._id)}`,
+          data: {
+            matchId: String(match._id),
+            matchCode: match.matchCode,
+          },
+          deduplicationKey: `match-rejected:${String(match._id)}:${player.linkedUserId}`,
+        }))
         .catch(() => undefined);
 
       return serializeMatch(match);

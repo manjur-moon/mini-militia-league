@@ -31,8 +31,7 @@ export function assignDenseKillPlacements(rows) {
 
   preparedRows.sort(
     (left, right) =>
-      right.row.kills - left.row.kills ||
-      left.sourceIndex - right.sourceIndex,
+      right.row.kills - left.row.kills || left.sourceIndex - right.sourceIndex,
   );
 
   let currentPlacement = 0;
