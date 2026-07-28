@@ -2,9 +2,9 @@
 
 Mini Militia League
 
-A competitive league management and analytics platform for verified match tracking, player rankings, titles, achievements, and performance insights.
+A production-oriented MERN league management and analytics platform for verified Mini Militia matches, OCR-assisted score extraction, player rankings, achievements, challenges, rivalries, seasons, Hall of Fame records, and role-based dashboards.
 
-Live Website · Server API
+Live Website · Live API · Repository
 
 </div>
 
@@ -12,550 +12,633 @@ Table of Contents
 
 Overview
 
-Project Links
-
-Demo Credentials
+Key Features
 
 User Roles
 
-Core Features
-
 Technology Stack
 
-Frontend Architecture
+System Architecture
 
-Application Routes
+Repository Structure
 
-Screenshots
+Prerequisites
 
-Getting Started
+Local Installation
 
 Environment Variables
 
+Running the Project
+
+Health Checks
+
+Database Preparation
+
 Available Scripts
 
-Testing
+Testing and Quality Assurance
+
+Production Build
 
 Deployment
 
-Related Repository
+Troubleshooting
+
+Security Notes
 
 Author
 
+License
+
 Overview
 
-Mini Militia League is a full-stack league management and analytics platform for recording verified matches, tracking player performance, and managing competitive rankings.
+Mini Militia League is a full-stack competitive league platform for recording screenshot-based match results, verifying extracted statistics, calculating official rankings, and presenting public and private analytics.
 
-Visitors can explore players, matches, leaderboards, ratings, titles, achievements, rivalries, challenges, seasons, Hall of Fame records, MVP results, and league analytics.
+The application supports:
 
-Authenticated players can access a protected dashboard, review their linked player profile, track performance, view achievements and challenges, receive notifications, and manage account settings.
+A responsive React frontend
 
-Moderators and administrators can upload match screenshots, review OCR-extracted results, correct match data, verify or reject matches, and manage league records.
+An Express and MongoDB backend
 
-This repository contains the React frontend of Mini Militia League. The interface is responsive across mobile, tablet, laptop, and desktop devices and includes protected role-based routes.
+Better Auth authentication and session management
 
-Project Links
+Role-based access control for players, moderators, and administrators
 
-Resource
+Cloudinary image storage
 
-URL
+Gemini OCR as the primary screenshot extraction provider
 
-Live Website
+PaddleOCR as the fallback OCR provider
 
-https://mini-militia-league-client.vercel.app
+Manual result review and correction
 
-Live API
+Dense kill-based placements
 
-https://mini-militia-league.onrender.com
+Automated statistics, achievements, challenges, rivalries, seasons, MVP, and Hall of Fame processing
 
-Repository
+Dense Ranking Rule
 
-https://github.com/manjur-moon/mini-militia-league.git
+Placements are calculated from kills in descending order.
 
-Demo Credentials
+Players with equal kills receive the same placement. Deaths do not break ties.
 
-Role
+Kills:       21, 21, 18, 12
+Placement:    1,  1,  2,  3
 
-Email
+Key Features
 
-Password
+Public Experience
 
-Admin
+Responsive home page
 
-YOUR_ADMIN_EMAIL
+Player directory and player profiles
 
-YOUR_ADMIN_PASSWORD
+Verified match history
 
-Player
+Global, weekly, monthly, and seasonal leaderboards
 
-YOUR_PLAYER_EMAIL
+MVP results
 
-YOUR_PLAYER_PASSWORD
+League analytics
 
-Demo credentials are intended only for project review. Replace or disable them before production use.
+Player ratings and titles
+
+Achievements and challenges
+
+Rivalry and head-to-head records
+
+Seasons and Hall of Fame
+
+Search, filtering, sorting, and pagination
+
+Authentication and Authorization
+
+Email and password authentication with Better Auth
+
+Cookie-based sessions
+
+Protected routes
+
+Role-based access control
+
+Player, moderator, and administrator dashboards
+
+Account and session management
+
+Player Management
+
+Unique player IDs
+
+Player profile photos
+
+Active and inactive status
+
+User-to-player linking
+
+Player statistics and analytics
+
+Achievement, challenge, rivalry, and title tracking
+
+Match Management
+
+Match screenshot upload
+
+Cloudinary screenshot storage
+
+Duplicate screenshot protection
+
+OCR job queue and retry workflow
+
+Gemini primary OCR
+
+PaddleOCR fallback
+
+OCR sweep-line scanning animation
+
+Player matching and manual correction
+
+Kill-based dense placement calculation
+
+Match verification and rejection
+
+Admin-only deletion of rejected matches
+
+Controlled corrections for verified matches
+
+Versioned correction history
+
+Analytics and Automation
+
+Total matches
+
+Total kills and deaths
+
+KDR
+
+Average kills and deaths
+
+Win rate
+
+Placement statistics
+
+MVP tracking
+
+Rankings
+
+Achievement evaluation
+
+Challenge evaluation
+
+Rivalry recalculation
+
+Season assignment
+
+Hall of Fame refresh
+
+AI-generated league insights when enabled
 
 User Roles
 
 Guest
 
-Explores public players, matches, leaderboards, and analytics
+Browse public pages
 
-Views ratings, titles, achievements, rivalries, challenges, seasons, and Hall of Fame records
+View players, verified matches, leaderboards, ratings, and analytics
 
-Registers or logs in
+Register or sign in
 
 Player
 
-Accesses the protected player dashboard
+Access the protected player dashboard
 
-Views the linked player profile and performance statistics
+View the linked player profile
 
-Tracks achievements and challenges
+Track statistics, achievements, and challenges
 
-Views notifications and account settings
+View notifications
+
+Manage account settings
 
 Moderator
 
-Uploads match screenshots
+Upload match screenshots
 
-Reviews OCR-extracted match results
+Review OCR results
 
-Corrects player data and result values
+Correct extracted values
 
-Verifies or rejects submitted matches
+Verify or reject matches
 
-Retries failed OCR jobs
+Retry failed OCR jobs
 
-Admin
+Access the match archive and verification queue
 
-Manages users and players
+Administrator
 
-Manages ratings, titles, achievements, rivalries, challenges, seasons, and Hall of Fame records
+Access all moderator capabilities
 
-Reviews match uploads and verification workflows
+Manage users and players
 
-Accesses administrative analytics and notifications
+Manage ratings, titles, achievements, challenges, seasons, rivalries, and Hall of Fame records
 
-Core Features
+Propose and approve verified-match corrections
 
-Email and password authentication with Better Auth
+Delete rejected matches
 
-Protected routes with role-based access control
-
-Responsive public and dashboard layouts
-
-Public player directory and player profile pages
-
-Verified match listing and match details
-
-Match screenshot upload and OCR review workflow
-
-Manual correction, verification, and rejection of match results
-
-Global, weekly, monthly, and seasonal leaderboards
-
-MVP results and player performance analytics
-
-Player ratings and dynamic league titles
-
-Achievement and challenge tracking
-
-Rivalry and head-to-head performance views
-
-Hall of Fame and season records
-
-Search, filtering, sorting, and pagination
-
-Loading states, empty states, toast feedback, and API error handling
+Access administrative analytics and notification management
 
 Technology Stack
 
-Core
-
-Technology
-
-Purpose
+Frontend
 
 React
 
-Component-based user interface
-
 Vite
-
-Development server and production build
 
 JavaScript
 
-Frontend application logic
-
 Tailwind CSS
-
-Responsive styling and dark mode
-
-State, Data, and Authentication
-
-Technology
-
-Purpose
-
-TanStack Query
-
-Data fetching, caching, mutations, and invalidation
-
-Axios
-
-API communication
-
-Better Auth Client
-
-Authentication and session management
 
 React Router
 
-Public, protected, and role-based routing
+TanStack Query
 
-UI and Visualization
+Axios
 
-Technology
+Better Auth Client
 
-Purpose
+React Hook Form
+
+Zod
 
 Recharts
 
-League and player analytics charts
+Framer Motion
 
 Lucide React
 
-Interface icons
-
 Sonner
 
-Toast notifications
+Vitest
+
+Testing Library
+
+Backend
+
+Node.js
+
+Express
+
+MongoDB
+
+Mongoose
+
+Better Auth
+
+Zod
 
 Cloudinary
 
-Player photo and match screenshot storage through the server
+Multer
 
-Frontend Architecture
+Sharp
+
+Helmet
+
+CORS
+
+Express Rate Limit
+
+Morgan
+
+Vitest
+
+Supertest
+
+OCR Service
+
+Python
+
+FastAPI
+
+Uvicorn
+
+PaddleOCR
+
+PaddlePaddle
+
+OpenCV
+
+NumPy
+
+Deployment
+
+Vercel for the frontend
+
+Render for the Node.js API
+
+Render for the PaddleOCR service
+
+MongoDB Atlas for the production database
+
+Cloudinary for image storage
+
+System Architecture
 
 flowchart LR
-Browser[Browser] --> Router[React Router]
-Router --> Public[Public Pages]
-Router --> Protected[Protected Dashboards]
-Protected --> Auth[Better Auth Session]
-Public --> Query[TanStack Query]
-Protected --> Query
-Query --> Client[Axios API Client]
-Client --> Server[Mini Militia Express API]
-
-Typical source structure:
-
-src/
-├── app/ # Router and application providers
-├── components/ # Shared brand and UI components
-├── config/ # Navigation configuration
-├── features/ # Authentication and feature modules
-├── layouts/ # Public and dashboard layouts
-├── lib/ # API client, auth client, and utilities
-├── pages/ # Public and protected pages
-└── services/ # Feature-specific API services
-
-Application Routes
-
-Public Routes
-
-Route
-
-Description
-
-/
-
-Homepage
-
-/players
-
-Player directory
-
-/players/:playerId
-
-Player profile
-
-/matches
-
-Verified match listing
-
-/matches/:matchId
-
-Match details
-
-/leaderboards
-
-League leaderboards
-
-/analytics
-
-League analytics
-
-/insights
-
-AI league insights
-
-/mvp
-
-MVP results
-
-/ratings
-
-Player ratings
-
-/titles
-
-Dynamic league titles
-
-/achievements
-
-Achievements
-
-/rivalries
-
-Player rivalries
-
-/challenges
-
-League challenges
-
-/hall-of-fame
-
-Hall of Fame
-
-/seasons
-
-League seasons
-
-/login
-
-User login
-
-/register
-
-User registration
-
-Player Dashboard
-
-Route
-
-Description
-
-/player
-
-Player dashboard overview
-
-/player/profile
-
-Linked player profile
-
-/player/performance
-
-Performance analytics
-
-/player/achievements
-
-Player achievements
-
-/player/challenges
-
-Player challenges
-
-/player/notifications
-
-Player notifications
-
-/player/account
-
-Account settings
-
-Moderator Dashboard
-
-Route
-
-Description
-
-/moderator
-
-Moderator dashboard
-
-/moderator/uploads
-
-Upload match screenshots
-
-/moderator/archive
-
-Match archive
-
-/moderator/verification
-
-Match verification queue
-
-/moderator/failed-jobs
-
-Failed OCR jobs
-
-Admin Dashboard
-
-Route
-
-Description
-
-/admin
-
-Admin dashboard overview
-
-/admin/users
-
-User management
-
-/admin/players
-
-Player management
-
-/admin/analytics
-
-Administrative analytics
-
-/admin/ratings
-
-Rating management
-
-/admin/titles
-
-Title management
-
-/admin/achievements
-
-Achievement management
-
-/admin/rivalries
-
-Rivalry management
-
-/admin/challenges
-
-Challenge management
-
-/admin/hall-of-fame
-
-Hall of Fame management
-
-/admin/seasons
-
-Season management
-
-/admin/uploads
-
-Upload match screenshots
-
-/admin/matches
-
-Match management
-
-/admin/verification
-
-Match verification queue
-
-/admin/notifications
-
-Notification management
-
-Screenshots
-
-Create a docs/screenshots folder and add project screenshots using the filenames below.
-
-<!--
-### Home Page
-![Mini Militia League home page](docs/screenshots/home-page.png)
-
-### Player Directory
-![Mini Militia League player directory](docs/screenshots/players-page.png)
-
-### Player Profile
-![Mini Militia League player profile](docs/screenshots/player-profile.png)
-
-### Leaderboards
-![Mini Militia League leaderboards](docs/screenshots/leaderboards.png)
-
-### Match Verification
-![Mini Militia League match verification](docs/screenshots/match-verification.png)
-
-### Admin Dashboard
-![Mini Militia League admin dashboard](docs/screenshots/admin-dashboard.png)
-
-### Mobile View
-![Mini Militia League mobile view](docs/screenshots/mobile-view.png)
--->
-
-Recommended screenshot size: 1440 × 900 for desktop and 390 × 844 for mobile.
-
-Getting Started
+    Browser[Browser] --> Client[React Client on Vercel]
+    Client --> API[Express API on Render]
+    API --> Auth[Better Auth]
+    API --> MongoDB[(MongoDB Atlas)]
+    API --> Cloudinary[Cloudinary]
+    API --> Gemini[Gemini OCR]
+    API --> Paddle[PaddleOCR FastAPI on Render]
+    Gemini --> Review[Match Review Workflow]
+    Paddle --> Review
+    Review --> Verify[Verification and Dense Ranking]
+    Verify --> Stats[Statistics and League Automation]
+
+Repository Structure
+
+mini-militia-league/
+├── client/                     # React and Vite frontend
+├── server/                     # Express and MongoDB backend
+├── ocr-service/                # PaddleOCR fallback service
+├── shared/                     # Shared workspace utilities and schemas
+├── scripts/                    # QA and deployment scripts
+├── docs/                       # OpenAPI and project documentation
+├── render.yaml
+├── vercel.json
+├── package.json
+└── README.md
 
 Prerequisites
 
-Node.js 20 or newer
+Install the following before starting:
 
-npm
+Node.js 22.13.0 or newer
 
-Running Mini Militia League server
+npm 10 or newer
+
+Python matching ocr-service/.python-version
+
+Git
+
+MongoDB Atlas or a local MongoDB server
+
+A Cloudinary account
+
+A Gemini API key
+
+A modern browser
+
+Verify your versions:
+
+node --version
+npm --version
+python --version
+git --version
+
+Local Installation
 
 1. Clone the repository
 
 git clone https://github.com/manjur-moon/mini-militia-league.git
 cd mini-militia-league
 
-2. Install dependencies
+2. Install Node.js dependencies
 
 npm install
 
-3. Create the environment file
-
-macOS/Linux:
-
-cp client/.env.example client/.env
+3. Create the frontend environment file
 
 Windows PowerShell:
 
 Copy-Item client/.env.example client/.env
 
-4. Configure the environment variables
+macOS or Linux:
 
-Update client/.env with the local or deployed backend URLs.
+cp client/.env.example client/.env
 
-5. Start the development server
+4. Create the backend environment file
 
-npm run dev
+Windows PowerShell:
 
-Open:
+Copy-Item server/.env.example server/.env
 
-http://localhost:5173
+macOS or Linux:
+
+cp server/.env.example server/.env
+
+5. Create the Python virtual environment
+
+Windows PowerShell:
+
+cd ocr-service
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+cd ..
+
+macOS or Linux:
+
+cd ocr-service
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+cd ..
 
 Environment Variables
 
-Create client/.env from client/.env.example:
+Never commit real secrets or production credentials.
 
-VITE_API_BASE_URL=http://localhost:5000/api/v1
+Client Environment
+
+Create client/.env:
+
+VITE_API_BASE_URL=http://localhost:5000
 VITE_AUTH_BASE_URL=http://localhost:5000
 
-Variable
+Server Environment
 
-Description
+Create server/.env:
 
-VITE_API_BASE_URL
+NODE_ENV=development
+PORT=5000
 
-Versioned Mini Militia League API URL
+MONGODB_URI=mongodb://127.0.0.1:27017
+MONGODB_DB_NAME=mini_militia_league
 
-VITE_AUTH_BASE_URL
+CLIENT_ORIGINS=http://localhost:5173,http://localhost:5174
+PUBLIC_APP_URL=http://localhost:5173
+PUBLIC_API_URL=http://localhost:5000
 
-Better Auth server origin
+BETTER_AUTH_URL=http://localhost:5000
+BETTER_AUTH_SECRET=replace-with-a-random-secret-at-least-32-characters-long
+BETTER_AUTH_COOKIE_PREFIX=mini_militia
+AUTH_COOKIE_SAME_SITE=lax
+AUTH_SESSION_EXPIRES_IN=604800
+AUTH_SESSION_UPDATE_AGE=86400
+AUTH_SESSION_FRESH_AGE=86400
 
-Never place MongoDB credentials, Better Auth secrets, Cloudinary secrets, or other server-only credentials in the frontend environment.
+TRUST_PROXY=false
+LOG_LEVEL=info
+JSON_BODY_LIMIT=1mb
+API_RATE_LIMIT_WINDOW_MS=900000
+API_RATE_LIMIT_MAX_REQUESTS=300
+LEAGUE_TIMEZONE=Asia/Dhaka
+
+INITIAL_ADMIN_NAME=League Administrator
+INITIAL_ADMIN_EMAIL=admin@example.com
+INITIAL_ADMIN_PASSWORD=replace-with-a-strong-unique-password
+
+CLOUDINARY_CLOUD_NAME=your-cloudinary-cloud-name
+CLOUDINARY_API_KEY=your-cloudinary-api-key
+CLOUDINARY_API_SECRET=your-cloudinary-api-secret
+CLOUDINARY_PLAYER_FOLDER=mini-militia/players
+CLOUDINARY_MATCH_FOLDER=mini-militia/matches
+
+MATCH_SCREENSHOT_MAX_BYTES=10485760
+
+OCR_PROVIDER=gemini
+OCR_FALLBACK_PROVIDER=paddleocr
+OCR_MAX_ATTEMPTS=3
+OCR_LOW_CONFIDENCE_THRESHOLD=0.75
+OCR_PARSER_PROFILE=mini-militia-final-score-v1
+OCR_RESULT_COLUMN_ORDER=placement,name,kills,deaths
+
+OCR_CROP_X_RATIO=0.205
+OCR_CROP_Y_RATIO=0.30
+OCR_CROP_WIDTH_RATIO=0.32
+OCR_CROP_HEIGHT_RATIO=0.51
+OCR_UPSCALE_WIDTH=1600
+
+GEMINI_API_KEY=your-gemini-api-key
+GEMINI_MODEL=your-working-gemini-model
+GEMINI_REQUEST_TIMEOUT_MS=45000
+
+PADDLE_OCR_URL=http://127.0.0.1:8001
+PADDLE_OCR_TIMEOUT_MS=90000
+
+GOOGLE_VISION_API_KEY=
+OCR_MOCK_TEXT=
+
+AI_PROVIDER=disabled
+OPENAI_API_KEY=
+OPENAI_MODEL=
+AI_REQUEST_TIMEOUT_MS=20000
+AI_MAX_OUTPUT_TOKENS=1200
+
+Generate a Better Auth secret:
+
+node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+
+OCR Provider Examples
+
+Gemini with PaddleOCR fallback:
+
+OCR_PROVIDER=gemini
+OCR_FALLBACK_PROVIDER=paddleocr
+GEMINI_API_KEY=your-gemini-api-key
+GEMINI_MODEL=your-working-gemini-model
+PADDLE_OCR_URL=http://127.0.0.1:8001
+
+PaddleOCR only:
+
+OCR_PROVIDER=paddleocr
+OCR_FALLBACK_PROVIDER=disabled
+PADDLE_OCR_URL=http://127.0.0.1:8001
+
+PADDLE_OCR_URL must be the service base URL. Do not append /health or /ocr.
+
+Running the Project
+
+The frontend, backend, and OCR service run as three processes.
+
+Terminal 1: PaddleOCR Service
+
+Windows PowerShell:
+
+cd C:\path\to\mini-militia-league\ocr-service
+.\.venv\Scripts\Activate.ps1
+python -m uvicorn main:app --host 127.0.0.1 --port 8001
+
+macOS or Linux:
+
+cd /path/to/mini-militia-league/ocr-service
+source .venv/bin/activate
+python -m uvicorn main:app --host 127.0.0.1 --port 8001
+
+Terminal 2: Backend Server
+
+npm run dev:server
+
+Backend URL:
+
+http://localhost:5000
+
+Terminal 3: Frontend Client
+
+npm run dev:client
+
+Frontend URL:
+
+http://localhost:5173
+
+Vite may use port 5174 when port 5173 is already occupied.
+
+Start Client and Server Together
+
+npm run dev
+
+The PaddleOCR service must still run separately.
+
+Health Checks
+
+Backend:
+
+Invoke-RestMethod http://localhost:5000/api/v1/health
+
+curl http://localhost:5000/api/v1/health
+
+PaddleOCR:
+
+Invoke-RestMethod http://127.0.0.1:8001/health
+
+curl http://127.0.0.1:8001/health
+
+PaddleOCR API documentation:
+
+http://127.0.0.1:8001/docs
+
+Database Preparation
+
+Create the Initial Administrator
+
+Configure the initial administrator values in server/.env, then run:
+
+npm run admin:bootstrap
+
+Run Database Migrations and Seeds
+
+npm run db:prepare
+
+Fix the Dense Placement Index
+
+Run this once for every existing database that still has a unique official-placement index:
+
+node --env-file=server/.env server/scripts/fix-match-placement-index.js
+
+Verify the indexes:
+
+node --env-file=server/.env server/scripts/list-match-result-indexes.js
+
+Expected placement index:
+
+name: matchId_1_official.placement_1
+unique: false
 
 Available Scripts
 
@@ -565,80 +648,332 @@ Description
 
 npm run dev
 
-Start the development environment
+Start the frontend and backend development servers
+
+npm run dev:client
+
+Start only the Vite frontend
+
+npm run dev:server
+
+Start only the Express backend
 
 npm run build
 
-Create the production build
+Create the frontend production build
+
+npm run start
+
+Start the backend in production mode
 
 npm run lint
 
-Run ESLint checks
+Run ESLint
+
+npm run format
+
+Format supported files with Prettier
+
+npm run format:check
+
+Check Prettier formatting
 
 npm run test
 
-Run the automated test suite
+Run server and client tests
+
+npm run test:server
+
+Run backend tests
+
+npm run test:client
+
+Run frontend tests
+
+npm run test:coverage
+
+Run coverage for server and client
+
+npm run test:critical
+
+Run critical test suites
+
+npm run test:database:memory
+
+Run MongoDB memory integration tests
+
+npm run check
+
+Run lint, tests, and build
 
 npm run qa
 
-Run linting, formatting, tests, build, and static QA
+Run the complete QA pipeline
 
-Testing
+npm run admin:bootstrap
 
-Run all quality checks:
+Create the initial administrator
+
+npm run db:migrate
+
+Run all database index migrations
+
+npm run seed:defaults
+
+Seed default production records
+
+npm run db:prepare
+
+Run migrations and default seeds
+
+npm run deploy:preflight
+
+Run backend production preflight validation
+
+npm run deployment:validate
+
+Validate deployment configuration
+
+npm run verify:production
+
+Run production verification checks
+
+Testing and Quality Assurance
+
+Run all tests:
+
+npm run test
+
+Run backend tests:
+
+npm run test:server
+
+Run frontend tests:
+
+npm run test:client
+
+Run linting:
+
+npm run lint
+
+Check formatting:
+
+npm run format:check
+
+Format the project:
+
+npm run format
+
+Run the complete QA pipeline:
 
 npm run qa
 
-Manual checks:
+The QA pipeline runs linting, formatting checks, tests, the production build, static quality checks, and deployment validation.
 
-Register, log in, and log out
+Recommended manual checks:
 
-Open protected player, moderator, and admin routes
+Register, sign in, and sign out
 
-View players, matches, leaderboards, ratings, and analytics
+Verify player, moderator, and administrator route protection
 
-Test search, filtering, sorting, and pagination
+Upload a new match screenshot
 
-Upload and review a match screenshot
+Confirm the OCR sweep-line animation appears while processing
 
-Verify role restrictions and dashboard navigation
+Confirm Gemini extraction succeeds
 
-Test mobile, laptop, and desktop layouts
+Confirm PaddleOCR fallback works when Gemini fails
+
+Review and correct OCR rows
+
+Verify dense kill-based placements
+
+Verify a match with tied kills
+
+Reject a match
+
+Delete a rejected match as an administrator
+
+Confirm moderators cannot delete rejected matches
+
+Test search, filtering, sorting, pagination, and responsive layouts
+
+Production Build
+
+Create the frontend build:
+
+npm run build
+
+Preview the built frontend:
+
+npm --prefix client run preview
+
+Start the backend in production mode:
+
+npm run start
 
 Deployment
 
-Vercel
+Vercel Frontend
 
-Push the repository to GitHub.
+The repository includes vercel.json.
 
-Import the repository into Vercel.
+Recommended configuration:
 
-Keep Vite as the framework preset.
+Repository: manjur-moon/mini-militia-league
+Production Branch: main
+Project Root: repository root
+Build Command: npm run build
+Output Directory: client/dist
+Install Command: npm ci
 
-Add the required environment variables.
+Vercel environment variables:
 
-Deploy the application.
-
-Production environment:
-
-VITE_API_BASE_URL=https://mini-militia-league.onrender.com/api/v1
+VITE_API_BASE_URL=https://mini-militia-league.onrender.com
 VITE_AUTH_BASE_URL=https://mini-militia-league.onrender.com
 
-After deployment, add the exact Vercel origin to the backend CORS and Better Auth trusted-origin configuration.
+Render Node.js Backend
 
-Related Repository
+Recommended configuration:
 
-The backend source, API routes, database models, authentication, OCR processing, Cloudinary uploads, match verification, statistics, and deployment configuration are included in the same project repository.
+Runtime: Node
+Build Command: npm ci --omit=dev
+Start Command: npm run start -w server
+Health Check Path: /api/v1/health
 
-Project Repository: https://github.com/manjur-moon/mini-militia-league.git
+Important production environment variables:
+
+NODE_ENV=production
+MONGODB_URI=your-production-mongodb-uri
+MONGODB_DB_NAME=mini_militia_league
+
+CLIENT_ORIGINS=https://mini-militia-league-client.vercel.app
+PUBLIC_APP_URL=https://mini-militia-league-client.vercel.app
+PUBLIC_API_URL=https://mini-militia-league.onrender.com
+
+BETTER_AUTH_URL=https://mini-militia-league.onrender.com
+BETTER_AUTH_SECRET=your-production-secret
+AUTH_COOKIE_SAME_SITE=none
+TRUST_PROXY=true
+
+CLOUDINARY_CLOUD_NAME=your-cloudinary-cloud-name
+CLOUDINARY_API_KEY=your-cloudinary-api-key
+CLOUDINARY_API_SECRET=your-cloudinary-api-secret
+
+OCR_PROVIDER=gemini
+OCR_FALLBACK_PROVIDER=paddleocr
+GEMINI_API_KEY=your-gemini-api-key
+GEMINI_MODEL=your-working-gemini-model
+PADDLE_OCR_URL=https://mini-militia-paddle-ocr.onrender.com
+PADDLE_OCR_TIMEOUT_MS=90000
+
+Render PaddleOCR Service
+
+Create a separate Python Web Service from the same repository.
+
+Runtime: Python
+Root Directory: ocr-service
+Build Command: python -m pip install --upgrade pip && python -m pip install -r requirements.txt
+Start Command: python -m uvicorn main:app --host 0.0.0.0 --port $PORT
+Health Check Path: /health
+
+The deployed service URL should be used as the backend value:
+
+PADDLE_OCR_URL=https://mini-militia-paddle-ocr.onrender.com
+
+Do not use http://127.0.0.1:8001 in the deployed backend.
+
+Production Database Migration
+
+Run the dense-placement migration once against the production database from a secure environment:
+
+node --env-file=server/.env server/scripts/fix-match-placement-index.js
+node --env-file=server/.env server/scripts/list-match-result-indexes.js
+
+Troubleshooting
+
+Backend Cannot Connect
+
+Start the backend:
+
+npm run dev:server
+
+Check port 5000 on Windows:
+
+Get-NetTCPConnection -LocalPort 5000 -State Listen -ErrorAction SilentlyContinue
+
+Missing Gemini API Key
+
+GEMINI_API_KEY is required when Gemini is configured as an OCR provider.
+
+Add the key to the backend environment and restart or redeploy the backend.
+
+Uvicorn Command Not Found
+
+cd ocr-service
+python -m pip install -r requirements.txt
+python -m uvicorn main:app --host 0.0.0.0 --port 8001
+
+PaddleOCR Root URL Returns 404
+
+Use /health, /docs, or /ocr.
+
+Duplicate Placement Error
+
+node --env-file=server/.env server/scripts/fix-match-placement-index.js
+
+Vercel Cannot Resolve Framer Motion
+
+npm install framer-motion --workspace=client
+npm run build
+
+Commit client/package.json and package-lock.json.
+
+Cross-Origin Login Problems
+
+Use consistent local URLs and restart both applications after changing environment variables:
+
+VITE_API_BASE_URL=http://localhost:5000
+VITE_AUTH_BASE_URL=http://localhost:5000
+CLIENT_ORIGINS=http://localhost:5173,http://localhost:5174
+BETTER_AUTH_URL=http://localhost:5000
+AUTH_COOKIE_SAME_SITE=lax
+
+Prettier Scans Generated Files
+
+Ensure .prettierignore excludes dependencies, virtual environments, build output, caches, and coverage directories.
+
+Security Notes
+
+Never commit .env files
+
+Never expose API keys or database credentials
+
+Never store server secrets in VITE_ variables
+
+Use different secrets for development and production
+
+Rotate any secret that was shared publicly
+
+Use strong administrator passwords
+
+Disable or replace demo credentials before production use
+
+Keep production CORS origins exact
+
+Use HTTPS in production
+
+Use AUTH_COOKIE_SAME_SITE=none only with HTTPS
+
+Back up production data before destructive migrations
 
 Author
 
 Manjurul Islam Moon
 
-GitHub: https://github.com/manjur-moon
+GitHub: manjur-moon
 
-LinkedIn: https://www.linkedin.com/in/md-manjurul-islam-616701295/
+LinkedIn: Md. Manjurul Islam
 
 Email: mmanjurulislam@gmail.com
 
