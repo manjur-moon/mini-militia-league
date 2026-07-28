@@ -1,9 +1,16 @@
 import mongoose from "mongoose";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { createMatchService } from "../src/services/match.service.js";
 
 const matchId = "64b64c1f4f0f4f0f4f0f4f0f";
-const actor = { id: "moderator-user" };
+
+const defaultPlayerIds = ["84b64c1f4f0f4f0f4f0f4f01", "84b64c1f4f0f4f0f4f0f4f02"];
+
+const actor = {
+  id: "moderator-user",
+};
+
 const requestMeta = {
   requestId: "qa-verification-request",
   ipAddress: "127.0.0.1",
@@ -16,8 +23,18 @@ function queryWithSession(value) {
   };
 }
 
+function mockTransactionSession() {
+  return {
+    withTransaction: async (callback) => callback(),
+    endSession: vi.fn(),
+  };
+}
+
 function createFixture({
   placements = [1, 2],
+  kills = [10, 9],
+  deaths = [2, 3],
+  playerIds = defaultPlayerIds,
   status = "needs_review",
   statsFail = false,
 } = {}) {
@@ -34,50 +51,81 @@ function createFixture({
     statisticsRecalculation: {},
     save: vi.fn(async () => match),
   };
+
   const results = placements.map((placement, index) => ({
-    _id: `74b64c1f4f0f4f0f4f0f4f0${index}`.slice(0, 24),
+    _id: ["74b64c1f4f0f4f0f4f0f4f01", "74b64c1f4f0f4f0f4f0f4f02"][index],
     corrected: {
-      playerId: `84b64c1f4f0f4f0f4f0f4f0${index}`.slice(0, 24),
+      playerId: playerIds[index],
       playerName: `Player ${index + 1}`,
-      kills: 10 - index,
-      deaths: 2 + index,
+      kills: kills[index],
+      deaths: deaths[index],
       placement,
     },
   }));
 
   const MatchModel = {
     findById: vi.fn(() => queryWithSession(match)),
-    updateOne: vi.fn(async () => ({ matchedCount: 1 })),
+    updateOne: vi.fn(async () => ({
+      matchedCount: 1,
+    })),
   };
+
   const MatchResultModel = {
     find: vi.fn(() => queryWithSession(results)),
-    bulkWrite: vi.fn(async () => ({ modifiedCount: results.length })),
+    bulkWrite: vi.fn(async () => ({
+      modifiedCount: results.length,
+    })),
   };
-  const AuditLogModel = { create: vi.fn(async () => []) };
+
+  const AuditLogModel = {
+    create: vi.fn(async () => []),
+  };
+
   const statsService = {
     recalculateForPlayerIds: statsFail
       ? vi.fn(async () => {
           throw new Error("simulated statistics failure");
         })
-      : vi.fn(async () => ({ status: "completed", updatedPlayers: 2 })),
+      : vi.fn(async () => ({
+          status: "completed",
+          updatedPlayers: 2,
+        })),
   };
+
   const achievementEvaluator = {
-    evaluatePlayerIds: vi.fn(async () => ({ newlyUnlocked: 1 })),
+    evaluatePlayerIds: vi.fn(async () => ({
+      newlyUnlocked: 1,
+    })),
   };
+
   const rivalryUpdater = {
-    refreshAfterMatch: vi.fn(async () => ({ pairsUpdated: 1 })),
+    refreshAfterMatch: vi.fn(async () => ({
+      pairsUpdated: 1,
+    })),
   };
+
   const challengeEvaluator = {
-    evaluatePlayerIds: vi.fn(async () => ({ newlyCompleted: 1 })),
+    evaluatePlayerIds: vi.fn(async () => ({
+      newlyCompleted: 1,
+    })),
   };
+
   const hallOfFameUpdater = {
-    refreshAfterVerifiedData: vi.fn(async () => ({ recordsUpdated: 1 })),
+    refreshAfterVerifiedData: vi.fn(async () => ({
+      recordsUpdated: 1,
+    })),
   };
+
   const seasonManager = {
-    resolveForMatch: vi.fn(async () => ({ _id: "94b64c1f4f0f4f0f4f0f4f0f" })),
+    resolveForMatch: vi.fn(async () => ({
+      _id: "94b64c1f4f0f4f0f4f0f4f0f",
+    })),
   };
+
   const notificationDelivery = {
-    createForLinkedPlayers: vi.fn(async () => ({ created: 2 })),
+    createForLinkedPlayers: vi.fn(async () => ({
+      created: 2,
+    })),
   };
 
   return {
@@ -93,6 +141,7 @@ function createFixture({
     hallOfFameUpdater,
     seasonManager,
     notificationDelivery,
+
     service: createMatchService({
       MatchModel,
       MatchResultModel,
@@ -119,11 +168,9 @@ afterEach(() => {
 describe("verified match critical workflow", () => {
   it("commits official rows before recalculating dependent systems", async () => {
     const fixture = createFixture();
-    const endSession = vi.fn();
-    vi.spyOn(mongoose, "startSession").mockResolvedValue({
-      withTransaction: async (callback) => callback(),
-      endSession,
-    });
+    const session = mockTransactionSession();
+
+    vi.spyOn(mongoose, "startSession").mockResolvedValue(session);
 
     const result = await fixture.service.verify({
       actor,
@@ -133,9 +180,15 @@ describe("verified match critical workflow", () => {
     });
 
     expect(fixture.MatchResultModel.bulkWrite).toHaveBeenCalledOnce();
+
     const operations = fixture.MatchResultModel.bulkWrite.mock.calls[0][0];
+
     expect(operations).toHaveLength(2);
+
     expect(operations[0].updateOne.update.$set.status).toBe("verified");
+
+    expect(operations[0].updateOne.update.$set["corrected.placement"]).toBe(1);
+
     expect(operations[0].updateOne.update.$set.official).toMatchObject({
       playerName: "Player 1",
       kills: 10,
@@ -143,50 +196,130 @@ describe("verified match critical workflow", () => {
       placement: 1,
       verifiedBy: actor.id,
     });
+
     expect(fixture.match.status).toBe("verified");
     expect(fixture.match.verifiedResultCount).toBe(2);
+
     expect(fixture.statsService.recalculateForPlayerIds).toHaveBeenCalledWith(
       fixture.results.map((row) => String(row.corrected.playerId)),
     );
+
     expect(fixture.achievementEvaluator.evaluatePlayerIds).toHaveBeenCalledOnce();
+
     expect(fixture.rivalryUpdater.refreshAfterMatch).toHaveBeenCalledOnce();
+
     expect(fixture.challengeEvaluator.evaluatePlayerIds).toHaveBeenCalledOnce();
+
     expect(fixture.hallOfFameUpdater.refreshAfterVerifiedData).toHaveBeenCalledOnce();
+
     expect(fixture.notificationDelivery.createForLinkedPlayers).toHaveBeenCalledOnce();
+
     expect(result.recalculation.status).toBe("completed");
-    expect(endSession).toHaveBeenCalledOnce();
+
+    expect(session.endSession).toHaveBeenCalledOnce();
   });
 
-  it("rejects duplicate or non-sequential placements before any official write", async () => {
-    const fixture = createFixture({ placements: [1, 1] });
-    vi.spyOn(mongoose, "startSession").mockResolvedValue({
-      withTransaction: async (callback) => callback(),
-      endSession: vi.fn(),
+  it("recalculates non-sequential submitted placements from kills", async () => {
+    const fixture = createFixture({
+      placements: [8, 8],
+      kills: [25, 15],
     });
+
+    vi.spyOn(mongoose, "startSession").mockResolvedValue(mockTransactionSession());
+
+    await fixture.service.verify({
+      actor,
+      matchId,
+      reason: "Normalize submitted placements using kills",
+      requestMeta,
+    });
+
+    const operations = fixture.MatchResultModel.bulkWrite.mock.calls[0][0];
+
+    expect(
+      operations.map((operation) => operation.updateOne.update.$set.official.placement),
+    ).toEqual([1, 2]);
+
+    expect(
+      operations.map(
+        (operation) => operation.updateOne.update.$set["corrected.placement"],
+      ),
+    ).toEqual([1, 2]);
+
+    expect(fixture.match.status).toBe("verified");
+
+    expect(fixture.statsService.recalculateForPlayerIds).toHaveBeenCalledOnce();
+  });
+
+  it("assigns the same placement when players have equal kills", async () => {
+    const fixture = createFixture({
+      placements: [1, 2],
+      kills: [21, 21],
+      deaths: [40, 2],
+    });
+
+    vi.spyOn(mongoose, "startSession").mockResolvedValue(mockTransactionSession());
+
+    await fixture.service.verify({
+      actor,
+      matchId,
+      reason: "Verify equal-kill placement",
+      requestMeta,
+    });
+
+    const operations = fixture.MatchResultModel.bulkWrite.mock.calls[0][0];
+
+    expect(
+      operations.map((operation) => operation.updateOne.update.$set.official.placement),
+    ).toEqual([1, 1]);
+
+    expect(operations[0].updateOne.update.$set.official).toMatchObject({
+      kills: 21,
+      deaths: 40,
+      placement: 1,
+    });
+
+    expect(operations[1].updateOne.update.$set.official).toMatchObject({
+      kills: 21,
+      deaths: 2,
+      placement: 1,
+    });
+  });
+
+  it("rejects duplicate players before any official write", async () => {
+    const duplicatedPlayerId = "84b64c1f4f0f4f0f4f0f4f01";
+
+    const fixture = createFixture({
+      playerIds: [duplicatedPlayerId, duplicatedPlayerId],
+    });
+
+    vi.spyOn(mongoose, "startSession").mockResolvedValue(mockTransactionSession());
 
     await expect(
       fixture.service.verify({
         actor,
         matchId,
-        reason: "Attempt invalid verification",
+        reason: "Attempt verification with duplicate player",
         requestMeta,
       }),
     ).rejects.toMatchObject({
       statusCode: 422,
-      code: "DUPLICATE_MATCH_RESULT",
+      code: "DUPLICATE_MATCH_PLAYER",
     });
 
     expect(fixture.MatchResultModel.bulkWrite).not.toHaveBeenCalled();
+
     expect(fixture.statsService.recalculateForPlayerIds).not.toHaveBeenCalled();
+
     expect(fixture.match.status).toBe("needs_review");
   });
 
-  it("preserves the verified source of truth and records a recoverable failure when recalculation fails", async () => {
-    const fixture = createFixture({ statsFail: true });
-    vi.spyOn(mongoose, "startSession").mockResolvedValue({
-      withTransaction: async (callback) => callback(),
-      endSession: vi.fn(),
+  it("preserves verified data when statistics recalculation fails", async () => {
+    const fixture = createFixture({
+      statsFail: true,
     });
+
+    vi.spyOn(mongoose, "startSession").mockResolvedValue(mockTransactionSession());
 
     const result = await fixture.service.verify({
       actor,
@@ -196,19 +329,25 @@ describe("verified match critical workflow", () => {
     });
 
     expect(fixture.match.status).toBe("verified");
+
     expect(result.recalculation).toMatchObject({
       status: "failed",
       errorCode: "STATISTICS_RECALCULATION_FAILED",
     });
+
     expect(fixture.MatchModel.updateOne).toHaveBeenCalledWith(
-      { _id: matchId },
+      {
+        _id: matchId,
+      },
       expect.objectContaining({
         $set: expect.objectContaining({
           "statisticsRecalculation.status": "failed",
         }),
       }),
     );
+
     expect(fixture.achievementEvaluator.evaluatePlayerIds).not.toHaveBeenCalled();
+
     expect(fixture.challengeEvaluator.evaluatePlayerIds).not.toHaveBeenCalled();
   });
 });

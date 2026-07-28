@@ -1,17 +1,23 @@
-import mongoose from "mongoose";
 import { createPaginationMeta } from "@mini-militia/shared";
+import mongoose from "mongoose";
+
 import { AuditLog } from "../models/audit-log.model.js";
 import { MatchResult } from "../models/match-result.model.js";
 import { MatchRevision } from "../models/match-revision.model.js";
 import { Match } from "../models/match.model.js";
 import { Player } from "../models/player.model.js";
 import { AppError } from "../utils/app-error.js";
-import { CORE_STATISTICS_VERSION, statisticsService } from "./statistics.service.js";
+import {
+  assignDenseKillPlacements,
+  hasUniquePlayerIds,
+  hasUniqueResultIds,
+} from "../utils/dense-kill-ranking.js";
 import { achievementService } from "./achievement.service.js";
-import { rivalryService } from "./rivalry.service.js";
 import { challengeService } from "./challenge.service.js";
 import { hallOfFameService } from "./hall-of-fame.service.js";
+import { rivalryService } from "./rivalry.service.js";
 import { seasonService } from "./season.service.js";
+import { CORE_STATISTICS_VERSION, statisticsService } from "./statistics.service.js";
 
 function matchNotFound() {
   return new AppError({
@@ -40,6 +46,7 @@ function auditMeta(actor, requestMeta) {
 
 function serialize(value) {
   const document = typeof value?.toObject === "function" ? value.toObject() : value;
+
   return {
     ...document,
     id: String(document._id),
@@ -49,40 +56,31 @@ function serialize(value) {
 }
 
 export function validateCorrectionRows(rows, participantCount) {
-  const playerIds = rows.map((row) => String(row.playerId));
-  const resultIds = rows.map((row) => String(row.resultId));
-  const placements = rows.map((row) => row.placement);
-  if (
-    new Set(playerIds).size !== rows.length ||
-    new Set(resultIds).size !== rows.length ||
-    new Set(placements).size !== rows.length
-  ) {
-    throw new AppError({
-      statusCode: 422,
-      code: "CORRECTION_INVALID",
-      message:
-        "Correction rows must contain unique result IDs, players and placements.",
-    });
-  }
-  if (rows.length !== participantCount) {
+  if (!Array.isArray(rows) || rows.length !== participantCount) {
     throw new AppError({
       statusCode: 422,
       code: "PARTICIPANT_COUNT_MISMATCH",
       message: "The corrected participant count must equal the result row count.",
     });
   }
-  const expectedPlacements = Array.from(
-    { length: participantCount },
-    (_, index) => index + 1,
-  );
-  const orderedPlacements = [...placements].sort((left, right) => left - right);
-  if (expectedPlacements.some((value, index) => value !== orderedPlacements[index])) {
+
+  if (!hasUniquePlayerIds(rows)) {
     throw new AppError({
       statusCode: 422,
-      code: "PLACEMENT_SEQUENCE_INVALID",
-      message: "Placements must form a complete sequence from 1 to participant count.",
+      code: "CORRECTION_PLAYER_DUPLICATE",
+      message: "Correction rows must contain each registered player exactly once.",
     });
   }
+
+  if (!hasUniqueResultIds(rows)) {
+    throw new AppError({
+      statusCode: 422,
+      code: "CORRECTION_RESULT_DUPLICATE",
+      message: "Correction rows must contain each match result exactly once.",
+    });
+  }
+
+  return assignDenseKillPlacements(rows);
 }
 
 function matchSnapshot(match) {
@@ -122,11 +120,24 @@ export function createMatchRevisionService({
 } = {}) {
   return Object.freeze({
     async list(matchId, query) {
-      const exists = await MatchModel.exists({ _id: matchId });
-      if (!exists) throw matchNotFound();
-      const filter = { matchId };
-      if (query.status) filter.status = query.status;
+      const exists = await MatchModel.exists({
+        _id: matchId,
+      });
+
+      if (!exists) {
+        throw matchNotFound();
+      }
+
+      const filter = {
+        matchId,
+      };
+
+      if (query.status) {
+        filter.status = query.status;
+      }
+
       const skip = (query.page - 1) * query.limit;
+
       const [items, totalItems] = await Promise.all([
         MatchRevisionModel.find(filter)
           .select({
@@ -135,12 +146,16 @@ export function createMatchRevisionService({
             previousMatchSnapshot: 0,
             proposedMatchSnapshot: 0,
           })
-          .sort({ revisionNumber: -1 })
+          .sort({
+            revisionNumber: -1,
+          })
           .skip(skip)
           .limit(query.limit)
           .lean(),
+
         MatchRevisionModel.countDocuments(filter),
       ]);
+
       return {
         items: items.map(serialize),
         pagination: createPaginationMeta({
@@ -156,13 +171,21 @@ export function createMatchRevisionService({
         matchId,
         revisionNumber,
       }).lean();
-      if (!revision) throw revisionNotFound();
+
+      if (!revision) {
+        throw revisionNotFound();
+      }
+
       return serialize(revision);
     },
 
     async propose({ actor, matchId, input, requestMeta }) {
       const match = await MatchModel.findById(matchId).lean();
-      if (!match) throw matchNotFound();
+
+      if (!match) {
+        throw matchNotFound();
+      }
+
       if (match.status !== "verified") {
         throw new AppError({
           statusCode: 409,
@@ -170,6 +193,7 @@ export function createMatchRevisionService({
           message: "Only verified matches can use the controlled correction workflow.",
         });
       }
+
       if (match.currentRevision !== input.expectedRevision) {
         throw new AppError({
           statusCode: 409,
@@ -177,10 +201,12 @@ export function createMatchRevisionService({
           message: "The verified match changed. Refresh before proposing a correction.",
         });
       }
+
       const openRevision = await MatchRevisionModel.exists({
         matchId,
         status: "proposed",
       });
+
       if (openRevision) {
         throw new AppError({
           statusCode: 409,
@@ -193,15 +219,22 @@ export function createMatchRevisionService({
         matchId,
         status: "verified",
       })
-        .sort({ "official.placement": 1 })
+        .sort({
+          "official.placement": 1,
+          rowIndex: 1,
+        })
         .lean();
+
       const participantCount =
         input.matchChanges?.participantCount ?? match.participantCount;
-      validateCorrectionRows(input.results, participantCount);
+
+      const rankedResults = validateCorrectionRows(input.results, participantCount);
+
       const currentResultIds = new Set(currentResults.map((row) => String(row._id)));
+
       if (
-        currentResults.length !== input.results.length ||
-        input.results.some((row) => !currentResultIds.has(String(row.resultId)))
+        currentResults.length !== rankedResults.length ||
+        rankedResults.some((row) => !currentResultIds.has(String(row.resultId)))
       ) {
         throw new AppError({
           statusCode: 422,
@@ -211,10 +244,19 @@ export function createMatchRevisionService({
         });
       }
 
-      const playerIds = input.results.map((row) => row.playerId);
-      const players = await PlayerModel.find({ _id: { $in: playerIds } })
-        .select({ _id: 1, name: 1 })
+      const playerIds = rankedResults.map((row) => row.playerId);
+
+      const players = await PlayerModel.find({
+        _id: {
+          $in: playerIds,
+        },
+      })
+        .select({
+          _id: 1,
+          name: 1,
+        })
         .lean();
+
       if (players.length !== new Set(playerIds.map(String)).size) {
         throw new AppError({
           statusCode: 422,
@@ -222,22 +264,34 @@ export function createMatchRevisionService({
           message: "One or more selected players do not exist.",
         });
       }
+
       const playerMap = new Map(players.map((player) => [String(player._id), player]));
-      const latestRevision = await MatchRevisionModel.findOne({ matchId })
-        .sort({ revisionNumber: -1 })
-        .select({ revisionNumber: 1 })
+
+      const latestRevision = await MatchRevisionModel.findOne({
+        matchId,
+      })
+        .sort({
+          revisionNumber: -1,
+        })
+        .select({
+          revisionNumber: 1,
+        })
         .lean();
+
       const proposedMatchDate = input.matchChanges?.matchDate
         ? new Date(input.matchChanges.matchDate)
         : match.matchDate;
+
       const requestedSeasonId =
         input.matchChanges?.seasonId !== undefined
           ? input.matchChanges.seasonId || null
           : match.seasonId;
+
       const assignedSeason = await seasonManager.resolveForMatch({
         matchDate: proposedMatchDate,
         requestedSeasonId,
       });
+
       const proposedMatchSnapshot = {
         ...matchSnapshot(match),
         matchDate: proposedMatchDate,
@@ -245,7 +299,8 @@ export function createMatchRevisionService({
         seasonId: assignedSeason?._id ?? null,
         participantCount,
       };
-      const proposedResultSnapshots = input.results
+
+      const proposedResultSnapshots = rankedResults
         .map((row) => ({
           resultId: String(row.resultId),
           playerId: String(row.playerId),
@@ -254,7 +309,12 @@ export function createMatchRevisionService({
           deaths: row.deaths,
           placement: row.placement,
         }))
-        .sort((left, right) => left.placement - right.placement);
+        .sort(
+          (left, right) =>
+            left.placement - right.placement ||
+            right.kills - left.kills ||
+            left.playerName.localeCompare(right.playerName),
+        );
 
       const revision = await MatchRevisionModel.create({
         matchId: match._id,
@@ -268,6 +328,7 @@ export function createMatchRevisionService({
         proposedMatchSnapshot,
         proposedResultSnapshots,
       });
+
       await AuditLogModel.create({
         ...auditMeta(actor, requestMeta),
         action: "match.correction_proposed",
@@ -277,21 +338,28 @@ export function createMatchRevisionService({
         newValue: revision.proposedMatchSnapshot,
         reason: input.reason,
       });
+
       return serialize(revision);
     },
 
     async approve({ actor, matchId, revisionNumber, input, requestMeta }) {
       const session = await mongoose.startSession();
+
       let affectedPlayerIds = [];
       let revisionId;
       let previousMatchDate = null;
+
       try {
         await session.withTransaction(async () => {
           const revision = await MatchRevisionModel.findOne({
             matchId,
             revisionNumber,
           }).session(session);
-          if (!revision) throw revisionNotFound();
+
+          if (!revision) {
+            throw revisionNotFound();
+          }
+
           if (revision.status !== "proposed") {
             throw new AppError({
               statusCode: 409,
@@ -299,10 +367,16 @@ export function createMatchRevisionService({
               message: "Only proposed revisions can be approved.",
             });
           }
+
           const match = await MatchModel.findById(matchId).session(session);
-          if (!match) throw matchNotFound();
+
+          if (!match) {
+            throw matchNotFound();
+          }
+
           previousMatchDate =
             revision.previousMatchSnapshot?.matchDate ?? match.matchDate;
+
           if (
             match.currentRevision !== input.expectedMatchRevision ||
             match.currentRevision !== revision.previousMatchSnapshot.currentRevision
@@ -314,24 +388,28 @@ export function createMatchRevisionService({
             });
           }
 
-          const proposedRows = revision.proposedResultSnapshots;
+          const proposedRows = validateCorrectionRows(
+            revision.proposedResultSnapshots,
+            revision.proposedMatchSnapshot.participantCount,
+          );
+
           const assignedSeason = await seasonManager.resolveForMatch({
             matchDate: revision.proposedMatchSnapshot.matchDate,
             requestedSeasonId: revision.proposedMatchSnapshot.seasonId ?? null,
             session,
           });
+
           revision.proposedMatchSnapshot.seasonId = assignedSeason?._id ?? null;
-          validateCorrectionRows(
-            proposedRows,
-            revision.proposedMatchSnapshot.participantCount,
-          );
+
           const results = await MatchResultModel.find({
             matchId,
             status: "verified",
           }).session(session);
+
           const resultMap = new Map(
             results.map((result) => [String(result._id), result]),
           );
+
           if (results.length !== proposedRows.length) {
             throw new AppError({
               statusCode: 422,
@@ -343,9 +421,12 @@ export function createMatchRevisionService({
           const oldPlayerIds = results.map((result) =>
             String(result.official.playerId),
           );
+
           const now = new Date();
+
           for (const proposed of proposedRows) {
             const result = resultMap.get(String(proposed.resultId));
+
             if (!result) {
               throw new AppError({
                 statusCode: 422,
@@ -353,6 +434,7 @@ export function createMatchRevisionService({
                 message: "A proposed result no longer exists.",
               });
             }
+
             result.official.playerId = proposed.playerId;
             result.official.playerName = proposed.playerName;
             result.official.kills = proposed.kills;
@@ -362,7 +444,10 @@ export function createMatchRevisionService({
             result.official.lastCorrectedAt = now;
             result.officialMatchDate = revision.proposedMatchSnapshot.matchDate;
             result.officialSeasonId = revision.proposedMatchSnapshot.seasonId ?? null;
-            await result.save({ session });
+
+            await result.save({
+              session,
+            });
           }
 
           match.matchDate = revision.proposedMatchSnapshot.matchDate;
@@ -370,6 +455,7 @@ export function createMatchRevisionService({
           match.seasonId = revision.proposedMatchSnapshot.seasonId ?? null;
           match.participantCount = revision.proposedMatchSnapshot.participantCount;
           match.currentRevision += 1;
+
           match.statisticsRecalculation = {
             status: "pending",
             calculationVersion: CORE_STATISTICS_VERSION,
@@ -377,21 +463,30 @@ export function createMatchRevisionService({
             completedAt: null,
             errorCode: null,
           };
-          await match.save({ session });
+
+          await match.save({
+            session,
+          });
 
           revision.status = "approved";
           revision.reviewedBy = actor.id;
           revision.reviewedAt = now;
           revision.appliedAt = now;
           revision.recalculationJobKey = `match:${matchId}:revision:${match.currentRevision}`;
-          await revision.save({ session });
+
+          await revision.save({
+            session,
+          });
+
           revisionId = String(revision._id);
+
           affectedPlayerIds = [
             ...new Set([
               ...oldPlayerIds,
               ...proposedRows.map((row) => String(row.playerId)),
             ]),
           ];
+
           await AuditLogModel.create(
             [
               {
@@ -410,7 +505,9 @@ export function createMatchRevisionService({
                 reason: input.approvalReason || revision.reason,
               },
             ],
-            { session },
+            {
+              session,
+            },
           );
         });
       } finally {
@@ -418,10 +515,14 @@ export function createMatchRevisionService({
       }
 
       let recalculation;
+
       try {
         recalculation = await statsService.recalculateForPlayerIds(affectedPlayerIds);
+
         await MatchModel.updateOne(
-          { _id: matchId },
+          {
+            _id: matchId,
+          },
           {
             $set: {
               "statisticsRecalculation.status": "completed",
@@ -437,8 +538,11 @@ export function createMatchRevisionService({
           status: "failed",
           errorCode: "STATISTICS_RECALCULATION_FAILED",
         };
+
         await MatchModel.updateOne(
-          { _id: matchId },
+          {
+            _id: matchId,
+          },
           {
             $set: {
               "statisticsRecalculation.status": "failed",
@@ -447,10 +551,12 @@ export function createMatchRevisionService({
           },
         );
       }
+
       let achievementEvaluation = {
         status: "skipped",
         newlyUnlocked: 0,
       };
+
       if (recalculation.status !== "failed") {
         try {
           const result = await achievementEvaluator.evaluatePlayerIds(
@@ -461,7 +567,11 @@ export function createMatchRevisionService({
               requestMeta,
             },
           );
-          achievementEvaluation = { status: "completed", ...result };
+
+          achievementEvaluation = {
+            status: "completed",
+            ...result,
+          };
         } catch {
           achievementEvaluation = {
             status: "failed",
@@ -470,12 +580,19 @@ export function createMatchRevisionService({
           };
         }
       }
-      let rivalryRecalculation = { status: "skipped" };
+
+      let rivalryRecalculation = {
+        status: "skipped",
+      };
+
       if (recalculation.status !== "failed") {
         try {
           const correctedMatch = await MatchModel.findById(matchId)
-            .select({ matchDate: 1 })
+            .select({
+              matchDate: 1,
+            })
             .lean();
+
           rivalryRecalculation = {
             status: "completed",
             ...(await rivalryUpdater.refreshAfterMatch({
@@ -490,12 +607,20 @@ export function createMatchRevisionService({
           };
         }
       }
-      let challengeEvaluation = { status: "skipped", newlyCompleted: 0 };
+
+      let challengeEvaluation = {
+        status: "skipped",
+        newlyCompleted: 0,
+      };
+
       if (recalculation.status !== "failed") {
         try {
           const correctedMatch = await MatchModel.findById(matchId)
-            .select({ matchDate: 1 })
+            .select({
+              matchDate: 1,
+            })
             .lean();
+
           const result = await challengeEvaluator.evaluatePlayerIds(affectedPlayerIds, {
             actor,
             dates: [correctedMatch?.matchDate ?? new Date(), previousMatchDate].filter(
@@ -504,7 +629,11 @@ export function createMatchRevisionService({
             reason: `Re-evaluate challenges after approved correction for match ${matchId}.`,
             requestMeta,
           });
-          challengeEvaluation = { status: "completed", ...result };
+
+          challengeEvaluation = {
+            status: "completed",
+            ...result,
+          };
         } catch {
           challengeEvaluation = {
             status: "failed",
@@ -513,7 +642,11 @@ export function createMatchRevisionService({
           };
         }
       }
-      let hallOfFameRecalculation = { status: "skipped" };
+
+      let hallOfFameRecalculation = {
+        status: "skipped",
+      };
+
       if (recalculation.status !== "failed") {
         try {
           hallOfFameRecalculation = {
@@ -531,6 +664,7 @@ export function createMatchRevisionService({
           };
         }
       }
+
       return {
         revisionId,
         revisionNumber,
@@ -544,8 +678,15 @@ export function createMatchRevisionService({
     },
 
     async reject({ actor, matchId, revisionNumber, reason, requestMeta }) {
-      const revision = await MatchRevisionModel.findOne({ matchId, revisionNumber });
-      if (!revision) throw revisionNotFound();
+      const revision = await MatchRevisionModel.findOne({
+        matchId,
+        revisionNumber,
+      });
+
+      if (!revision) {
+        throw revisionNotFound();
+      }
+
       if (revision.status !== "proposed") {
         throw new AppError({
           statusCode: 409,
@@ -553,19 +694,27 @@ export function createMatchRevisionService({
           message: "Only proposed revisions can be rejected.",
         });
       }
+
       revision.status = "rejected";
       revision.reviewedBy = actor.id;
       revision.reviewedAt = new Date();
+
       await revision.save();
+
       await AuditLogModel.create({
         ...auditMeta(actor, requestMeta),
         action: "match.correction_rejected",
         entityType: "matchRevision",
         entityId: String(revision._id),
-        previousValue: { status: "proposed" },
-        newValue: { status: "rejected" },
+        previousValue: {
+          status: "proposed",
+        },
+        newValue: {
+          status: "rejected",
+        },
         reason,
       });
+
       return serialize(revision);
     },
   });

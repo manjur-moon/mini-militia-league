@@ -23,6 +23,8 @@ export const OCR_JOB_STATUSES = Object.freeze([
 export const OCR_PROVIDERS = Object.freeze([
   "google-vision",
   "tesseract",
+  "gemini",
+  "paddleocr",
   "mock",
   "disabled",
 ]);

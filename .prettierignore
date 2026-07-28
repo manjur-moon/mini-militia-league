@@ -1,5 +1,9 @@
-node_modules
-dist
-coverage
-package-lock.json
-docs/openapi.yaml
+node_modules/
+dist/
+coverage/
+
+ocr-service/.venv/
+ocr-service/__pycache__/
+ocr-service/.pytest_cache/
+ocr-service/**/*.pyc
+ocr-service/requirements.lock.txt

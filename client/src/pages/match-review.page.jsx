@@ -18,8 +18,12 @@ import { LoadingState } from "@/components/ui/loading-state.jsx";
 import { PageHeader } from "@/components/ui/page-header.jsx";
 import { authClient } from "@/lib/auth-client.js";
 import {
+  assignDenseKillPlacements,
+  validateMatchReviewRows,
+} from "@/lib/dense-kill-ranking.js";
+import { getPlayers } from "@/services/player.service.js";
+import {
   approveMatchRevision,
-  deleteRejectedMatch,
   getMatch,
   getMatchRevisions,
   proposeMatchRevision,
@@ -29,7 +33,6 @@ import {
   saveMatchReview,
   verifyMatch,
 } from "@/services/match.service.js";
-import { getPlayers } from "@/services/player.service.js";
 
 const inputClass =
   "w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm dark:border-slate-700 dark:bg-slate-950";
@@ -61,13 +64,12 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
   const { matchId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-
   const session = authClient.useSession();
+
   const isAdmin = session.data?.user?.role === "admin";
 
   const [rows, setRows] = useState([]);
   const [correctionMode, setCorrectionMode] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [reason, setReason] = useState(
     "Moderator verified screenshot against corrected rows",
   );
@@ -75,7 +77,6 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
   const matchQuery = useQuery({
     queryKey: ["match", matchId],
     queryFn: () => getMatch(matchId),
-    enabled: Boolean(matchId),
     refetchInterval: (query) => {
       const status = query.state.data?.data?.ocrJob?.status;
 
@@ -84,19 +85,12 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
   });
 
   const detail = matchQuery.data?.data;
-
   const verified = detail?.match?.status === "verified";
-
-  const rejected = detail?.match?.status === "rejected";
 
   const revisionsQuery = useQuery({
     queryKey: ["match-revisions", matchId],
-    queryFn: () =>
-      getMatchRevisions(matchId, {
-        page: 1,
-        limit: 20,
-      }),
-    enabled: Boolean(verified && matchId),
+    queryFn: () => getMatchRevisions(matchId, { page: 1, limit: 20 }),
+    enabled: Boolean(verified),
   });
 
   const playersQuery = useQuery({
@@ -137,7 +131,13 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
 
   const editable = !terminal || (verified && isAdmin && correctionMode);
 
-  const canVerify = rows.length >= 2 && rows.every((row) => row.playerId) && !terminal;
+  const rankedRows = useMemo(() => assignDenseKillPlacements(rows), [rows]);
+
+  const reviewValidation = useMemo(() => validateMatchReviewRows(rows), [rows]);
+
+  const validationMessage = reviewValidation.errors[0] ?? null;
+
+  const canVerify = reviewValidation.isValid && !terminal;
 
   const openRevision = revisionsQuery.data?.data?.find(
     (revision) => revision.status === "proposed",
@@ -198,55 +198,9 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
     },
 
     onError: (error) => {
-      toast.error(error.message ?? "Unable to update the match.");
+      toast.error(error.message);
     },
   });
-
-  const deleteMutation = useMutation({
-    mutationFn: () => deleteRejectedMatch(matchId),
-
-    onSuccess: async (result) => {
-      toast.success(result.message ?? "Rejected match deleted successfully.");
-
-      setDeleteDialogOpen(false);
-
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: ["matches"],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["public-matches"],
-        }),
-      ]);
-
-      navigate(archivePath, {
-        replace: true,
-      });
-    },
-
-    onError: (error) => {
-      toast.error(error.message ?? "Unable to delete the rejected match.");
-    },
-  });
-
-  const duplicateProblem = useMemo(() => {
-    const playerIds = rows.map((row) => row.playerId).filter(Boolean);
-
-    const placements = rows.map((row) => Number(row.placement));
-
-    return (
-      new Set(playerIds).size !== playerIds.length ||
-      new Set(placements).size !== placements.length
-    );
-  }, [rows]);
-
-  const placementSequenceProblem = useMemo(() => {
-    const ordered = rows
-      .map((row) => Number(row.placement))
-      .sort((left, right) => left - right);
-
-    return ordered.some((placement, index) => placement !== index + 1);
-  }, [rows]);
 
   function updateRow(index, key, value) {
     setRows((current) =>
@@ -262,7 +216,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
   }
 
   function normalizedRows() {
-    return rows.map((row) => ({
+    return rankedRows.map((row) => ({
       ...(row.resultId
         ? {
             resultId: row.resultId,
@@ -276,9 +230,8 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
   }
 
   function saveReview() {
-    if (duplicateProblem || placementSequenceProblem) {
-      toast.error("Players must be unique and placements must run from 1 to N.");
-
+    if (!reviewValidation.isValid) {
+      toast.error(validationMessage ?? "Review rows are incomplete.");
       return;
     }
 
@@ -288,7 +241,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
         matchId,
         matchDate: detail.match.matchDate,
         timezone: detail.match.timezone,
-        participantCount: rows.length,
+        participantCount: rankedRows.length,
         reason,
         rows: normalizedRows().map((row) => ({
           ...row,
@@ -299,13 +252,13 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
   }
 
   function proposeCorrection() {
-    if (
-      duplicateProblem ||
-      placementSequenceProblem ||
-      rows.some((row) => !row.resultId)
-    ) {
-      toast.error("Every official row, player and sequential placement is required.");
+    if (!reviewValidation.isValid) {
+      toast.error(validationMessage ?? "Correction rows are incomplete.");
+      return;
+    }
 
+    if (rankedRows.some((row) => !row.resultId)) {
+      toast.error("Every correction row must reference an existing official result.");
       return;
     }
 
@@ -318,7 +271,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
         matchChanges: {
           matchDate: detail.match.matchDate,
           timezone: detail.match.timezone,
-          participantCount: rows.length,
+          participantCount: rankedRows.length,
           seasonId: detail.match.seasonId ?? null,
         },
         results: normalizedRows(),
@@ -343,17 +296,13 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
     <div className="space-y-7">
       <PageHeader
         eyebrow={detail.match.matchCode}
-        title={
-          verified ? "Verified match" : rejected ? "Rejected match" : "OCR verification"
-        }
+        title={verified ? "Verified match" : "OCR verification"}
         description={
           verified
             ? "Official results are locked. Admin corrections require a versioned proposal and approval."
-            : rejected
-              ? "This match was rejected and is excluded from official statistics."
-              : "Compare the preserved screenshot with every row. Only the corrected snapshot can be verified."
+            : "Compare the preserved screenshot with every row. Only the corrected snapshot can be verified."
         }
-        icon={verified ? ShieldCheck : rejected ? XCircle : ScanLine}
+        icon={verified ? ShieldCheck : ScanLine}
         action={
           <button
             type="button"
@@ -403,14 +352,6 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
               {detail.ocrJob?.maxAttempts ?? 0}
             </p>
 
-            {rejected && detail.match.verification?.rejectionReason ? (
-              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
-                <p className="font-black">Rejection reason</p>
-
-                <p className="mt-1">{detail.match.verification.rejectionReason}</p>
-              </div>
-            ) : null}
-
             {detail.ocrJob?.errorHistory?.length ? (
               <p className="mt-2 text-red-600">
                 {detail.ocrJob.errorHistory.at(-1).message}
@@ -435,23 +376,20 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                 Retry OCR
               </button>
             ) : null}
-
-            {rejected && isAdmin ? (
-              <button
-                type="button"
-                disabled={deleteMutation.isPending}
-                onClick={() => setDeleteDialogOpen(true)}
-                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 font-black text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Trash2 size={17} aria-hidden="true" />
-                Delete rejected match
-              </button>
-            ) : null}
           </div>
         </div>
 
         <div className="space-y-4">
-          {rows.map((row, index) => (
+          <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-200">
+            <p className="font-black">Automatic kill-based placement</p>
+
+            <p className="mt-1 leading-6">
+              Placement is calculated automatically from kills. Players with equal kills
+              receive the same placement. Deaths do not break ties.
+            </p>
+          </div>
+
+          {rankedRows.map((row, index) => (
             <article
               key={row.resultId ?? `manual-${index}`}
               className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
@@ -501,6 +439,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                   className={inputClass}
                   type="number"
                   min="0"
+                  step="1"
                   aria-label="Kills"
                   value={row.kills}
                   disabled={!editable}
@@ -511,6 +450,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                   className={inputClass}
                   type="number"
                   min="0"
+                  step="1"
                   aria-label="Deaths"
                   value={row.deaths}
                   disabled={!editable}
@@ -518,15 +458,14 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                 />
 
                 <input
-                  className={inputClass}
+                  className={`${inputClass} cursor-not-allowed bg-slate-100 font-black text-slate-700 dark:bg-slate-800 dark:text-slate-200`}
                   type="number"
                   min="1"
-                  aria-label="Placement"
-                  value={row.placement}
-                  disabled={!editable}
-                  onChange={(event) =>
-                    updateRow(index, "placement", event.target.value)
-                  }
+                  aria-label="Calculated placement"
+                  title="Placement is calculated automatically from kills."
+                  value={row.placement ?? ""}
+                  disabled
+                  readOnly
                 />
               </div>
             </article>
@@ -542,7 +481,6 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                     playerId: "",
                     kills: 0,
                     deaths: 0,
-                    placement: current.length + 1,
                     sourceName: "Manual row",
                     confidence: 1,
                     warnings: [],
@@ -556,33 +494,30 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
             </button>
           ) : null}
 
-          {!rejected ? (
-            <label className="block text-sm font-bold">
-              {verified ? "Correction reason" : "Review reason"}
+          <label className="block text-sm font-bold">
+            {verified ? "Correction reason" : "Review reason"}
 
-              <textarea
-                className={`${inputClass} mt-2 min-h-24`}
-                value={reason}
-                disabled={terminal && !correctionMode}
-                onChange={(event) => setReason(event.target.value)}
-              />
-            </label>
-          ) : null}
+            <textarea
+              className={`${inputClass} mt-2 min-h-24`}
+              value={reason}
+              disabled={terminal && !correctionMode}
+              onChange={(event) => setReason(event.target.value)}
+            />
+          </label>
 
-          {duplicateProblem || placementSequenceProblem ? (
-            <p className="text-sm font-bold text-red-600">
-              Players must be unique and placements must form the sequence 1 to{" "}
-              {rows.length}.
-            </p>
+          {!reviewValidation.isValid ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+              {reviewValidation.errors.map((error) => (
+                <p key={error}>{error}</p>
+              ))}
+            </div>
           ) : null}
 
           {!terminal ? (
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
-                disabled={
-                  mutation.isPending || duplicateProblem || placementSequenceProblem
-                }
+                disabled={mutation.isPending || !reviewValidation.isValid}
                 onClick={saveReview}
                 className="rounded-xl border border-slate-300 px-4 py-2.5 font-black disabled:opacity-40 dark:border-slate-700"
               >
@@ -591,12 +526,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
 
               <button
                 type="button"
-                disabled={
-                  mutation.isPending ||
-                  !canVerify ||
-                  duplicateProblem ||
-                  placementSequenceProblem
-                }
+                disabled={mutation.isPending || !canVerify}
                 onClick={() =>
                   mutation.mutate({
                     type: "verify",
@@ -638,7 +568,6 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                   type="button"
                   onClick={() => {
                     setCorrectionMode(true);
-
                     setReason("Admin correction required for verified match data");
                   }}
                   className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 font-black text-slate-950"
@@ -652,8 +581,8 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                     type="button"
                     disabled={
                       mutation.isPending ||
-                      duplicateProblem ||
-                      placementSequenceProblem ||
+                      !reviewValidation.isValid ||
+                      rankedRows.some((row) => !row.resultId) ||
                       reason.trim().length < 5
                     }
                     onClick={proposeCorrection}
@@ -667,7 +596,6 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                     type="button"
                     onClick={() => {
                       setCorrectionMode(false);
-
                       setRows(toEditableRows(detail.results));
                     }}
                     className="rounded-xl border border-slate-400 px-4 py-2.5 font-black"
@@ -728,7 +656,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                             },
                           })
                         }
-                        className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-3 py-2 text-sm font-black text-slate-950"
+                        className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-3 py-2 text-sm font-black text-slate-950 disabled:opacity-40"
                       >
                         <CheckCircle2 size={16} />
                         Approve
@@ -747,7 +675,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                             },
                           })
                         }
-                        className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-sm font-black text-white"
+                        className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-sm font-black text-white disabled:opacity-40"
                       >
                         <XCircle size={16} />
                         Reject
@@ -761,63 +689,6 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
             <p className="text-sm text-slate-500">No correction revisions exist.</p>
           )}
         </section>
-      ) : null}
-
-      {deleteDialogOpen ? (
-        <div
-          className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 p-4"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !deleteMutation.isPending) {
-              setDeleteDialogOpen(false);
-            }
-          }}
-        >
-          <div
-            role="alertdialog"
-            aria-modal="true"
-            aria-labelledby="delete-rejected-match-title"
-            aria-describedby="delete-rejected-match-description"
-            className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
-          >
-            <div className="grid size-12 place-items-center rounded-2xl bg-red-500/15 text-red-600 dark:text-red-400">
-              <Trash2 size={24} aria-hidden="true" />
-            </div>
-
-            <h2 id="delete-rejected-match-title" className="mt-5 text-2xl font-black">
-              Delete rejected match?
-            </h2>
-
-            <p
-              id="delete-rejected-match-description"
-              className="mt-3 text-sm leading-6 text-slate-500"
-            >
-              This will permanently remove the match screenshot and OCR data. This
-              action cannot be undone.
-            </p>
-
-            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                disabled={deleteMutation.isPending}
-                onClick={() => setDeleteDialogOpen(false)}
-                className="rounded-xl border border-slate-300 px-4 py-2.5 font-black transition hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                disabled={deleteMutation.isPending}
-                onClick={() => deleteMutation.mutate()}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 font-black text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Trash2 size={17} aria-hidden="true" />
-
-                {deleteMutation.isPending ? "Deleting..." : "Delete permanently"}
-              </button>
-            </div>
-          </div>
-        </div>
       ) : null}
     </div>
   );

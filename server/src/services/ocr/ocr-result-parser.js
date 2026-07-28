@@ -7,18 +7,24 @@ export const OCR_PARSER_PROFILES = Object.freeze({
 
 const GENERIC_HEADER_WORDS =
   /\b(rank|place|placement|player|name|kills?|deaths?|score)\b/i;
+
 const MINI_MILITIA_IGNORED_LINE =
   /^(final\s+game\s+scores?|no\s+game\s+data|total\s+bp|total\s+exp|done|waiting\s+for\s+players|ready\s+to\s+play|not\s+ready)$/i;
+
 const BULLET_PREFIX = /^[•●·◦○*]+\s*/u;
-const DASHES = /[‐‑‒–—−]/g;
+const DASHES = /[‐-‒–—−]/g;
 
 function clampConfidence(value) {
   return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
 }
 
 function parseInteger(value) {
-  if (!/^\d+$/.test(value)) return null;
+  if (!/^\d+$/.test(value)) {
+    return null;
+  }
+
   const parsed = Number(value);
+
   return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
@@ -35,8 +41,13 @@ function normalizeOCRNumber(value, { signed = false } = {}) {
     .replace(/g/g, "9");
 
   const pattern = signed ? /^[+-]?\d+$/ : /^\d+$/;
-  if (!pattern.test(compact)) return null;
+
+  if (!pattern.test(compact)) {
+    return null;
+  }
+
   const parsed = Number(compact);
+
   return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
@@ -47,73 +58,145 @@ function tokenize(line) {
       .map((item) => item.trim())
       .filter(Boolean);
   }
+
   if (/\t/.test(line)) {
     return line
       .split(/\t+/)
       .map((item) => item.trim())
       .filter(Boolean);
   }
+
   const wideColumns = line
     .split(/\s{2,}/)
     .map((item) => item.trim())
     .filter(Boolean);
+
   return wideColumns.length >= 4 ? wideColumns : line.trim().split(/\s+/);
+}
+
+export function assignDenseKillPlacements(rows) {
+  const sortedRows = rows
+    .map((row, sourceIndex) => ({
+      row,
+      sourceIndex,
+    }))
+    .sort(
+      (left, right) =>
+        right.row.kills - left.row.kills || left.sourceIndex - right.sourceIndex,
+    );
+
+  let currentPlacement = 0;
+  let previousKills = null;
+
+  return sortedRows.map(({ row }) => {
+    if (row.kills !== previousKills) {
+      currentPlacement += 1;
+    }
+
+    previousKills = row.kills;
+
+    return {
+      ...row,
+      placement: currentPlacement,
+    };
+  });
 }
 
 function parseGenericLine(line, columnOrder) {
   const tokens = tokenize(line);
-  if (tokens.length < 4) return null;
+
+  if (tokens.length < 4) {
+    return null;
+  }
 
   const nameIndex = columnOrder.indexOf("name");
   const prefixCount = nameIndex;
   const suffixCount = columnOrder.length - nameIndex - 1;
-  if (tokens.length < prefixCount + suffixCount + 1) return null;
+
+  if (tokens.length < prefixCount + suffixCount + 1) {
+    return null;
+  }
 
   const nameTokens = tokens.slice(
     prefixCount,
     tokens.length - suffixCount || undefined,
   );
-  const name = nameTokens.join(" ").trim();
-  if (!name || parseInteger(name) !== null) return null;
 
-  const values = { name };
+  const name = nameTokens.join(" ").trim();
+
+  if (!name || parseInteger(name) !== null) {
+    return null;
+  }
+
+  const values = {
+    name,
+  };
+
   for (let index = 0; index < columnOrder.length; index += 1) {
     const key = columnOrder[index];
-    if (key === "name") continue;
+
+    if (key === "name") {
+      continue;
+    }
+
     const tokenIndex =
       index < nameIndex ? index : tokens.length - (columnOrder.length - index);
+
     const parsed = parseInteger(tokens[tokenIndex]);
-    if (parsed === null) return null;
+
+    if (parsed === null) {
+      return null;
+    }
+
     values[key] = parsed;
   }
 
-  if (values.placement < 1 || values.placement > 50) return null;
-  if (values.kills < 0 || values.deaths < 0) return null;
+  if (values.kills < 0 || values.deaths < 0) {
+    return null;
+  }
+
   return values;
 }
 
 function parseMiniMilitiaLine(line) {
   const cleaned = line.replace(DASHES, "-").replace(BULLET_PREFIX, "").trim();
-  if (!cleaned || MINI_MILITIA_IGNORED_LINE.test(cleaned)) return null;
+
+  if (!cleaned || MINI_MILITIA_IGNORED_LINE.test(cleaned)) {
+    return null;
+  }
 
   const match = cleaned.match(
-    /^(?<name>.+?)\s+(?<kills>[0-9OoQqIl|!ZzSsBbGg]+)\s+(?<deaths>[0-9OoQqIl|!ZzSsBbGg]+)\s+(?<difference>[+-]\s*[0-9OoQqIl|!ZzSsBbGg]+)$/u,
+    /^(?<name>.+?)\s+(?<kills>[0-9OoQqIl|!ZzSsBbGg]+)\s+(?<deaths>[0-9OoQqIl|!ZzSsBbGg]+)(?:\s+(?<difference>[+-]\s*[0-9OoQqIl|!ZzSsBbGg]+))?$/u,
   );
-  if (!match?.groups) return null;
+
+  if (!match?.groups) {
+    return null;
+  }
 
   const name = match.groups.name.replace(BULLET_PREFIX, "").trim();
   const kills = normalizeOCRNumber(match.groups.kills);
   const deaths = normalizeOCRNumber(match.groups.deaths);
-  const scoreDifference = normalizeOCRNumber(match.groups.difference, {
-    signed: true,
-  });
 
-  if (!name || kills === null || deaths === null || scoreDifference === null) {
+  if (!name || kills === null || deaths === null) {
     return null;
   }
-  if (kills < 0 || deaths < 0) return null;
 
-  return { name, kills, deaths, scoreDifference };
+  if (kills < 0 || deaths < 0) {
+    return null;
+  }
+
+  const suppliedDifference = match.groups.difference
+    ? normalizeOCRNumber(match.groups.difference, {
+        signed: true,
+      })
+    : null;
+
+  return {
+    name,
+    kills,
+    deaths,
+    scoreDifference: suppliedDifference ?? kills - deaths,
+  };
 }
 
 function parseGeneric({ lines, columnOrder, confidence }) {
@@ -121,18 +204,23 @@ function parseGeneric({ lines, columnOrder, confidence }) {
   const rejectedLines = [];
 
   for (const line of lines) {
-    if (GENERIC_HEADER_WORDS.test(line) && !/\d/.test(line)) continue;
+    if (GENERIC_HEADER_WORDS.test(line) && !/\d/.test(line)) {
+      continue;
+    }
+
     const parsed = parseGenericLine(line, columnOrder);
+
     if (!parsed) {
       rejectedLines.push(line);
       continue;
     }
+
     rows.push({
       playerName: parsed.name,
       normalizedPlayerName: normalizeText(parsed.name),
       kills: parsed.kills,
       deaths: parsed.deaths,
-      placement: parsed.placement,
+      placement: 0,
       scoreDifference: null,
       confidence,
       rawText: line,
@@ -140,7 +228,7 @@ function parseGeneric({ lines, columnOrder, confidence }) {
   }
 
   return {
-    rows,
+    rows: assignDenseKillPlacements(rows),
     rejectedLines,
     parserVersion: OCR_PARSER_PROFILES.GENERIC,
   };
@@ -151,8 +239,12 @@ function parseMiniMilitia({ lines, confidence }) {
   const rejectedLines = [];
 
   for (const line of lines) {
-    if (MINI_MILITIA_IGNORED_LINE.test(line)) continue;
+    if (MINI_MILITIA_IGNORED_LINE.test(line)) {
+      continue;
+    }
+
     const parsed = parseMiniMilitiaLine(line);
+
     if (!parsed) {
       rejectedLines.push(line);
       continue;
@@ -163,7 +255,7 @@ function parseMiniMilitia({ lines, confidence }) {
       normalizedPlayerName: normalizeText(parsed.name),
       kills: parsed.kills,
       deaths: parsed.deaths,
-      placement: rows.length + 1,
+      placement: 0,
       scoreDifference: parsed.scoreDifference,
       confidence,
       rawText: line,
@@ -171,7 +263,7 @@ function parseMiniMilitia({ lines, confidence }) {
   }
 
   return {
-    rows,
+    rows: assignDenseKillPlacements(rows),
     rejectedLines,
     parserVersion: OCR_PARSER_PROFILES.MINI_MILITIA_FINAL_SCORE,
   };
@@ -187,13 +279,22 @@ export function parseOCRText({
     .split(/\r?\n/)
     .map((line) => line.replace(DASHES, "-").trim())
     .filter(Boolean);
+
   const confidence = clampConfidence(averageConfidence);
 
   if (profile === OCR_PARSER_PROFILES.GENERIC) {
-    return parseGeneric({ lines, columnOrder, confidence });
+    return parseGeneric({
+      lines,
+      columnOrder,
+      confidence,
+    });
   }
+
   if (profile === OCR_PARSER_PROFILES.MINI_MILITIA_FINAL_SCORE) {
-    return parseMiniMilitia({ lines, confidence });
+    return parseMiniMilitia({
+      lines,
+      confidence,
+    });
   }
 
   throw new Error(`Unsupported OCR parser profile: ${profile}`);

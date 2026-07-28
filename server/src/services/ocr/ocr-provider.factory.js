@@ -1,13 +1,17 @@
 import { env } from "../../config/env.js";
 import { AppError } from "../../utils/app-error.js";
 import { disabledOCRProvider } from "./providers/disabled.provider.js";
+import { geminiProvider } from "./providers/gemini.provider.js";
 import { googleVisionProvider } from "./providers/google-vision.provider.js";
 import { mockOCRProvider } from "./providers/mock.provider.js";
+import { paddleOCRProvider } from "./providers/paddleocr.provider.js";
 import { tesseractProvider } from "./providers/tesseract.provider.js";
 
 const providers = Object.freeze({
   "google-vision": googleVisionProvider,
   tesseract: tesseractProvider,
+  gemini: geminiProvider,
+  paddleocr: paddleOCRProvider,
   mock: mockOCRProvider,
   disabled: disabledOCRProvider,
 });

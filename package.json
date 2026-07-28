@@ -18,7 +18,7 @@
     "dev:client": "npm run dev -w client",
     "build": "npm --prefix client run build",
     "start": "npm run start -w server",
-    "lint": "eslint .",
+    "lint": "eslint client server shared scripts eslint.config.js",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "npm --prefix server test && npm --prefix client test",
