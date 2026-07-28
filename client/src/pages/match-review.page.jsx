@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
+import { OcrScanningPreview } from "@/components/match/ocr-scanning-preview.jsx";
 import { ErrorState } from "@/components/ui/error-state.jsx";
 import { LoadingState } from "@/components/ui/loading-state.jsx";
 import { PageHeader } from "@/components/ui/page-header.jsx";
@@ -35,27 +36,39 @@ import {
 } from "@/services/match.service.js";
 
 const inputClass =
-  "w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm dark:border-slate-700 dark:bg-slate-950";
+  "w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-700 dark:bg-slate-950";
 
-function toEditableRows(results) {
+function toEditableRows(results = []) {
   return results
     .filter((row) => row.status !== "rejected")
     .map((row) => ({
       resultId: row.id,
+
       playerId:
         row.official?.playerId ??
         row.corrected?.playerId ??
         row.playerMatch?.suggestedPlayerId ??
         "",
-      kills: row.official?.kills ?? row.corrected?.kills ?? row.extracted.kills,
-      deaths: row.official?.deaths ?? row.corrected?.deaths ?? row.extracted.deaths,
+
+      kills: row.official?.kills ?? row.corrected?.kills ?? row.extracted?.kills ?? 0,
+
+      deaths:
+        row.official?.deaths ?? row.corrected?.deaths ?? row.extracted?.deaths ?? 0,
+
       placement:
-        row.official?.placement ?? row.corrected?.placement ?? row.extracted.placement,
+        row.official?.placement ??
+        row.corrected?.placement ??
+        row.extracted?.placement ??
+        null,
+
       sourceName:
         row.official?.playerName ??
         row.corrected?.playerName ??
-        row.extracted.playerName,
-      confidence: row.extracted.confidence,
+        row.extracted?.playerName ??
+        "Unknown OCR row",
+
+      confidence: row.extracted?.confidence ?? 0,
+
       warnings: row.validationWarnings ?? [],
     }));
 }
@@ -70,13 +83,18 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
 
   const [rows, setRows] = useState([]);
   const [correctionMode, setCorrectionMode] = useState(false);
+
   const [reason, setReason] = useState(
     "Moderator verified screenshot against corrected rows",
   );
 
   const matchQuery = useQuery({
     queryKey: ["match", matchId],
+
     queryFn: () => getMatch(matchId),
+
+    enabled: Boolean(matchId),
+
     refetchInterval: (query) => {
       const status = query.state.data?.data?.ocrJob?.status;
 
@@ -85,16 +103,28 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
   });
 
   const detail = matchQuery.data?.data;
+
   const verified = detail?.match?.status === "verified";
+
+  const ocrStatus = detail?.ocrJob?.status ?? "";
+
+  const isOcrScanning = ["queued", "processing"].includes(ocrStatus);
 
   const revisionsQuery = useQuery({
     queryKey: ["match-revisions", matchId],
-    queryFn: () => getMatchRevisions(matchId, { page: 1, limit: 20 }),
-    enabled: Boolean(verified),
+
+    queryFn: () =>
+      getMatchRevisions(matchId, {
+        page: 1,
+        limit: 20,
+      }),
+
+    enabled: Boolean(matchId && verified),
   });
 
   const playersQuery = useQuery({
     queryKey: ["review-player-options"],
+
     queryFn: async () => {
       const [active, inactive] = await Promise.all([
         getPlayers({
@@ -104,6 +134,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
           sortBy: "name",
           sortOrder: "asc",
         }),
+
         getPlayers({
           status: "inactive",
           page: 1,
@@ -113,8 +144,14 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
         }),
       ]);
 
+      const combinedPlayers = [...(active.data ?? []), ...(inactive.data ?? [])];
+
+      const uniquePlayers = [
+        ...new Map(combinedPlayers.map((player) => [player.id, player])).values(),
+      ];
+
       return {
-        data: [...active.data, ...inactive.data],
+        data: uniquePlayers,
       };
     },
   });
@@ -123,7 +160,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
     if (detail?.results) {
       setRows(toEditableRows(detail.results));
     }
-  }, [detail]);
+  }, [detail?.results]);
 
   const players = playersQuery.data?.data ?? [];
 
@@ -137,7 +174,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
 
   const validationMessage = reviewValidation.errors[0] ?? null;
 
-  const canVerify = reviewValidation.isValid && !terminal;
+  const canVerify = reviewValidation.isValid && !terminal && !isOcrScanning;
 
   const openRevision = revisionsQuery.data?.data?.find(
     (revision) => revision.status === "proposed",
@@ -169,42 +206,49 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
         return rejectMatchRevision(payload);
       }
 
-      return retryOCR(payload.jobId);
+      if (type === "retry") {
+        return retryOCR(payload.jobId);
+      }
+
+      throw new Error("Unsupported match action.");
     },
 
-    onSuccess: (result) => {
-      toast.success(result.message);
+    onSuccess: async (result) => {
+      toast.success(result?.message ?? "Match updated successfully.");
+
       setCorrectionMode(false);
 
-      queryClient.invalidateQueries({
-        queryKey: ["match", matchId],
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["match", matchId],
+        }),
 
-      queryClient.invalidateQueries({
-        queryKey: ["matches"],
-      });
+        queryClient.invalidateQueries({
+          queryKey: ["matches"],
+        }),
 
-      queryClient.invalidateQueries({
-        queryKey: ["match-revisions", matchId],
-      });
+        queryClient.invalidateQueries({
+          queryKey: ["match-revisions", matchId],
+        }),
 
-      queryClient.invalidateQueries({
-        queryKey: ["player-profile"],
-      });
+        queryClient.invalidateQueries({
+          queryKey: ["player-profile"],
+        }),
 
-      queryClient.invalidateQueries({
-        queryKey: ["public-matches"],
-      });
+        queryClient.invalidateQueries({
+          queryKey: ["public-matches"],
+        }),
+      ]);
     },
 
     onError: (error) => {
-      toast.error(error.message);
+      toast.error(error.message ?? "Unable to update the match.");
     },
   });
 
   function updateRow(index, key, value) {
-    setRows((current) =>
-      current.map((row, rowIndex) =>
+    setRows((currentRows) =>
+      currentRows.map((row, rowIndex) =>
         rowIndex === index
           ? {
               ...row,
@@ -215,6 +259,10 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
     );
   }
 
+  function removeRow(index) {
+    setRows((currentRows) => currentRows.filter((_, rowIndex) => rowIndex !== index));
+  }
+
   function normalizedRows() {
     return rankedRows.map((row) => ({
       ...(row.resultId
@@ -222,6 +270,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
             resultId: row.resultId,
           }
         : {}),
+
       playerId: row.playerId,
       kills: Number(row.kills),
       deaths: Number(row.deaths),
@@ -230,19 +279,28 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
   }
 
   function saveReview() {
+    if (isOcrScanning) {
+      toast.error("Wait for OCR scanning to finish.");
+
+      return;
+    }
+
     if (!reviewValidation.isValid) {
       toast.error(validationMessage ?? "Review rows are incomplete.");
+
       return;
     }
 
     mutation.mutate({
       type: "review",
+
       payload: {
         matchId,
         matchDate: detail.match.matchDate,
         timezone: detail.match.timezone,
         participantCount: rankedRows.length,
         reason,
+
         rows: normalizedRows().map((row) => ({
           ...row,
           reason: "Confirmed during screenshot review",
@@ -251,32 +309,89 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
     });
   }
 
+  function verifyCurrentMatch() {
+    if (isOcrScanning) {
+      toast.error("Wait for OCR scanning to finish.");
+
+      return;
+    }
+
+    if (!reviewValidation.isValid) {
+      toast.error(validationMessage ?? "Review rows are incomplete.");
+
+      return;
+    }
+
+    mutation.mutate({
+      type: "verify",
+
+      payload: {
+        matchId,
+        reason,
+      },
+    });
+  }
+
+  function rejectCurrentMatch() {
+    if (reason.trim().length < 3) {
+      toast.error("Provide a valid rejection reason.");
+
+      return;
+    }
+
+    mutation.mutate({
+      type: "reject",
+
+      payload: {
+        matchId,
+        reason,
+      },
+    });
+  }
+
   function proposeCorrection() {
     if (!reviewValidation.isValid) {
       toast.error(validationMessage ?? "Correction rows are incomplete.");
+
       return;
     }
 
     if (rankedRows.some((row) => !row.resultId)) {
       toast.error("Every correction row must reference an existing official result.");
+
       return;
     }
 
     mutation.mutate({
       type: "correction",
+
       payload: {
         matchId,
         reason,
+
         expectedRevision: detail.match.currentRevision,
+
         matchChanges: {
           matchDate: detail.match.matchDate,
+
           timezone: detail.match.timezone,
+
           participantCount: rankedRows.length,
+
           seasonId: detail.match.seasonId ?? null,
         },
+
         results: normalizedRows(),
       },
     });
+  }
+
+  function cancelCorrection() {
+    setCorrectionMode(false);
+
+    setRows(toEditableRows(detail?.results ?? []));
+
+    setReason("Admin correction required for verified match data");
   }
 
   if (matchQuery.isPending) {
@@ -287,6 +402,15 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
     return (
       <ErrorState
         description={matchQuery.error.message}
+        onRetry={() => matchQuery.refetch()}
+      />
+    );
+  }
+
+  if (!detail?.match) {
+    return (
+      <ErrorState
+        description="Match details are unavailable."
         onRetry={() => matchQuery.refetch()}
       />
     );
@@ -307,53 +431,74 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
           <button
             type="button"
             onClick={() => navigate(archivePath)}
-            className="rounded-xl border border-slate-300 px-4 py-2 font-bold dark:border-slate-700"
+            className="min-h-11 rounded-xl border border-slate-300 px-4 py-2 font-bold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
           >
             Back to archive
           </button>
         }
       />
 
-      <section className="grid gap-5 xl:grid-cols-[420px_1fr]">
+      <section className="grid gap-5 xl:grid-cols-[420px_minmax(0,1fr)]">
         <div className="space-y-4">
-          <a href={detail.match.screenshot.secureUrl} target="_blank" rel="noreferrer">
-            <img
-              src={detail.match.screenshot.secureUrl}
+          <a
+            href={detail.match.screenshot.secureUrl}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Open original match screenshot"
+            className="block rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950"
+          >
+            <OcrScanningPreview
+              imageUrl={detail.match.screenshot.secureUrl}
               alt="Original Mini Militia result screenshot"
-              className="w-full rounded-2xl border border-slate-200 object-contain dark:border-slate-800"
+              isScanning={isOcrScanning}
+              status={ocrStatus}
+              provider={detail.ocrJob?.provider}
             />
           </a>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
-            <p>
-              <strong>Match status:</strong> {detail.match.status.replaceAll("_", " ")}
-            </p>
+            <div className="grid gap-2">
+              <p>
+                <strong>Match status:</strong>{" "}
+                {detail.match.status.replaceAll("_", " ")}
+              </p>
 
-            <p>
-              <strong>Official revision:</strong> {detail.match.currentRevision}
-            </p>
+              <p>
+                <strong>Official revision:</strong> {detail.match.currentRevision}
+              </p>
 
-            <p>
-              <strong>Statistics:</strong>{" "}
-              {detail.match.statisticsRecalculation?.status?.replaceAll("_", " ") ??
-                "not started"}
-            </p>
+              <p>
+                <strong>Statistics:</strong>{" "}
+                {detail.match.statisticsRecalculation?.status?.replaceAll("_", " ") ??
+                  "not started"}
+              </p>
 
-            <p>
-              <strong>OCR status:</strong> {detail.ocrJob?.status ?? "Unavailable"}
-            </p>
+              <p>
+                <strong>OCR status:</strong> {detail.ocrJob?.status ?? "Unavailable"}
+              </p>
 
-            <p>
-              <strong>Provider:</strong> {detail.ocrJob?.provider ?? "Unavailable"}
-            </p>
+              <p>
+                <strong>Provider:</strong> {detail.ocrJob?.provider ?? "Unavailable"}
+              </p>
 
-            <p>
-              <strong>Attempts:</strong> {detail.ocrJob?.attempts ?? 0}/
-              {detail.ocrJob?.maxAttempts ?? 0}
-            </p>
+              <p>
+                <strong>Attempts:</strong> {detail.ocrJob?.attempts ?? 0}/
+                {detail.ocrJob?.maxAttempts ?? 0}
+              </p>
+            </div>
+
+            {isOcrScanning ? (
+              <div className="mt-4 flex items-center gap-2 rounded-xl border border-cyan-200 bg-cyan-50 p-3 font-bold text-cyan-800 dark:border-cyan-900 dark:bg-cyan-950/30 dark:text-cyan-200">
+                <ScanLine size={17} className="shrink-0" />
+
+                <span>
+                  OCR scanning is in progress. Results will update automatically.
+                </span>
+              </div>
+            ) : null}
 
             {detail.ocrJob?.errorHistory?.length ? (
-              <p className="mt-2 text-red-600">
+              <p className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
                 {detail.ocrJob.errorHistory.at(-1).message}
               </p>
             ) : null}
@@ -362,17 +507,22 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
             detail.ocrJob.attempts < detail.ocrJob.maxAttempts ? (
               <button
                 type="button"
+                disabled={mutation.isPending}
                 onClick={() =>
                   mutation.mutate({
                     type: "retry",
+
                     payload: {
                       jobId: detail.ocrJob.id,
                     },
                   })
                 }
-                className="mt-3 inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 font-bold dark:border-slate-700"
+                className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 font-bold transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
               >
-                <RefreshCw size={16} />
+                <RefreshCw
+                  size={16}
+                  className={mutation.isPending ? "animate-spin" : ""}
+                />
                 Retry OCR
               </button>
             ) : null}
@@ -389,94 +539,140 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
             </p>
           </div>
 
+          {isOcrScanning && !rankedRows.length ? (
+            <div className="rounded-2xl border border-dashed border-cyan-300 bg-cyan-50/60 p-8 text-center dark:border-cyan-900 dark:bg-cyan-950/20">
+              <ScanLine
+                size={34}
+                className="mx-auto animate-pulse text-cyan-600 dark:text-cyan-300"
+              />
+
+              <p className="mt-4 font-black text-slate-950 dark:text-white">
+                Scanning screenshot
+              </p>
+
+              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                Player names, kills and deaths will appear here after OCR processing
+                finishes.
+              </p>
+            </div>
+          ) : null}
+
           {rankedRows.map((row, index) => (
             <article
               key={row.resultId ?? `manual-${index}`}
               className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
             >
               <div className="mb-3 flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-black">{row.sourceName}</p>
+                <div className="min-w-0">
+                  <p className="truncate font-black">{row.sourceName}</p>
 
-                  <p className="text-xs text-slate-500">
-                    OCR confidence: {Math.round((row.confidence ?? 0) * 100)}%{" "}
-                    {row.warnings.length ? `· ${row.warnings.join(", ")}` : ""}
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    OCR confidence: {Math.round((row.confidence ?? 0) * 100)}%
+                    {row.warnings.length ? ` · ${row.warnings.join(", ")}` : ""}
                   </p>
                 </div>
 
                 {!terminal ? (
                   <button
                     type="button"
-                    onClick={() =>
-                      setRows((current) =>
-                        current.filter((_, rowIndex) => rowIndex !== index),
-                      )
-                    }
-                    aria-label="Exclude row"
+                    disabled={mutation.isPending || isOcrScanning}
+                    onClick={() => removeRow(index)}
+                    aria-label={`Exclude ${row.sourceName}`}
+                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-red-400 dark:hover:bg-red-950/30"
                   >
                     <Trash2 size={17} />
                   </button>
                 ) : null}
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-[1.5fr_repeat(3,90px)]">
-                <select
-                  className={inputClass}
-                  value={row.playerId}
-                  disabled={!editable}
-                  onChange={(event) => updateRow(index, "playerId", event.target.value)}
-                >
-                  <option value="">Select registered player</option>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(180px,1.5fr)_repeat(3,minmax(80px,100px))]">
+                <label className="block">
+                  <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Player
+                  </span>
 
-                  {players.map((player) => (
-                    <option key={player.id} value={player.id}>
-                      {player.playerId} — {player.name}
-                    </option>
-                  ))}
-                </select>
+                  <select
+                    className={inputClass}
+                    value={row.playerId}
+                    disabled={!editable || isOcrScanning}
+                    onChange={(event) =>
+                      updateRow(index, "playerId", event.target.value)
+                    }
+                  >
+                    <option value="">Select registered player</option>
 
-                <input
-                  className={inputClass}
-                  type="number"
-                  min="0"
-                  step="1"
-                  aria-label="Kills"
-                  value={row.kills}
-                  disabled={!editable}
-                  onChange={(event) => updateRow(index, "kills", event.target.value)}
-                />
+                    {players.map((player) => (
+                      <option key={player.id} value={player.id}>
+                        {player.playerId} — {player.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-                <input
-                  className={inputClass}
-                  type="number"
-                  min="0"
-                  step="1"
-                  aria-label="Deaths"
-                  value={row.deaths}
-                  disabled={!editable}
-                  onChange={(event) => updateRow(index, "deaths", event.target.value)}
-                />
+                <label className="block">
+                  <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Kills
+                  </span>
 
-                <input
-                  className={`${inputClass} cursor-not-allowed bg-slate-100 font-black text-slate-700 dark:bg-slate-800 dark:text-slate-200`}
-                  type="number"
-                  min="1"
-                  aria-label="Calculated placement"
-                  title="Placement is calculated automatically from kills."
-                  value={row.placement ?? ""}
-                  disabled
-                  readOnly
-                />
+                  <input
+                    className={inputClass}
+                    type="number"
+                    min="0"
+                    step="1"
+                    inputMode="numeric"
+                    aria-label="Kills"
+                    value={row.kills}
+                    disabled={!editable || isOcrScanning}
+                    onChange={(event) => updateRow(index, "kills", event.target.value)}
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Deaths
+                  </span>
+
+                  <input
+                    className={inputClass}
+                    type="number"
+                    min="0"
+                    step="1"
+                    inputMode="numeric"
+                    aria-label="Deaths"
+                    value={row.deaths}
+                    disabled={!editable || isOcrScanning}
+                    onChange={(event) => updateRow(index, "deaths", event.target.value)}
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Placement
+                  </span>
+
+                  <input
+                    className={`${inputClass} cursor-not-allowed bg-slate-100 font-black text-slate-700 dark:bg-slate-800 dark:text-slate-200`}
+                    type="number"
+                    min="1"
+                    aria-label="Calculated placement"
+                    title="Placement is calculated automatically from kills."
+                    value={row.placement ?? ""}
+                    disabled
+                    readOnly
+                  />
+                </label>
               </div>
             </article>
           ))}
 
-          {!terminal ? (
+          {!terminal && !isOcrScanning ? (
             <button
               type="button"
+              disabled={mutation.isPending}
               onClick={() =>
-                setRows((current) => [
-                  ...current,
+                setRows((currentRows) => [
+                  ...currentRows,
+
                   {
                     playerId: "",
                     kills: 0,
@@ -487,7 +683,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                   },
                 ])
               }
-              className="inline-flex items-center gap-2 rounded-xl border border-dashed border-slate-400 px-4 py-2 font-bold"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-dashed border-slate-400 px-4 py-2 font-bold transition hover:border-amber-500 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-amber-950/20"
             >
               <Plus size={17} />
               Add missing row
@@ -498,14 +694,14 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
             {verified ? "Correction reason" : "Review reason"}
 
             <textarea
-              className={`${inputClass} mt-2 min-h-24`}
+              className={`${inputClass} mt-2 min-h-24 resize-y`}
               value={reason}
-              disabled={terminal && !correctionMode}
+              disabled={isOcrScanning || (terminal && !correctionMode)}
               onChange={(event) => setReason(event.target.value)}
             />
           </label>
 
-          {!reviewValidation.isValid ? (
+          {!reviewValidation.isValid && !isOcrScanning ? (
             <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
               {reviewValidation.errors.map((error) => (
                 <p key={error}>{error}</p>
@@ -514,12 +710,14 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
           ) : null}
 
           {!terminal ? (
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <button
                 type="button"
-                disabled={mutation.isPending || !reviewValidation.isValid}
+                disabled={
+                  mutation.isPending || isOcrScanning || !reviewValidation.isValid
+                }
                 onClick={saveReview}
-                className="rounded-xl border border-slate-300 px-4 py-2.5 font-black disabled:opacity-40 dark:border-slate-700"
+                className="min-h-11 rounded-xl border border-slate-300 px-4 py-2.5 font-black transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:hover:bg-slate-800"
               >
                 Save review
               </button>
@@ -527,16 +725,8 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
               <button
                 type="button"
                 disabled={mutation.isPending || !canVerify}
-                onClick={() =>
-                  mutation.mutate({
-                    type: "verify",
-                    payload: {
-                      matchId,
-                      reason,
-                    },
-                  })
-                }
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 font-black text-slate-950 disabled:opacity-40"
+                onClick={verifyCurrentMatch}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 font-black text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ShieldCheck size={18} />
                 Verify match
@@ -544,17 +734,11 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
 
               <button
                 type="button"
-                disabled={mutation.isPending || reason.trim().length < 3}
-                onClick={() =>
-                  mutation.mutate({
-                    type: "reject",
-                    payload: {
-                      matchId,
-                      reason,
-                    },
-                  })
+                disabled={
+                  mutation.isPending || isOcrScanning || reason.trim().length < 3
                 }
-                className="rounded-xl bg-red-600 px-4 py-2.5 font-black text-white disabled:opacity-40"
+                onClick={rejectCurrentMatch}
+                className="min-h-11 rounded-xl bg-red-600 px-4 py-2.5 font-black text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Reject match
               </button>
@@ -568,15 +752,16 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                   type="button"
                   onClick={() => {
                     setCorrectionMode(true);
+
                     setReason("Admin correction required for verified match data");
                   }}
-                  className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 font-black text-slate-950"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 font-black text-slate-950 transition hover:bg-amber-400"
                 >
                   <PencilLine size={18} />
                   Propose verified correction
                 </button>
               ) : (
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                   <button
                     type="button"
                     disabled={
@@ -586,7 +771,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                       reason.trim().length < 5
                     }
                     onClick={proposeCorrection}
-                    className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 font-black text-slate-950 disabled:opacity-40"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 font-black text-slate-950 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <PencilLine size={18} />
                     Submit correction proposal
@@ -594,11 +779,9 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
 
                   <button
                     type="button"
-                    onClick={() => {
-                      setCorrectionMode(false);
-                      setRows(toEditableRows(detail.results));
-                    }}
-                    className="rounded-xl border border-slate-400 px-4 py-2.5 font-black"
+                    disabled={mutation.isPending}
+                    onClick={cancelCorrection}
+                    className="min-h-11 rounded-xl border border-slate-400 px-4 py-2.5 font-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-slate-900"
                   >
                     Cancel
                   </button>
@@ -621,6 +804,13 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
 
           {revisionsQuery.isPending ? <LoadingState title="Loading revisions" /> : null}
 
+          {revisionsQuery.isError ? (
+            <ErrorState
+              description={revisionsQuery.error.message}
+              onRetry={() => revisionsQuery.refetch()}
+            />
+          ) : null}
+
           {revisionsQuery.data?.data?.length ? (
             <div className="grid gap-3">
               {revisionsQuery.data.data.map((revision) => (
@@ -633,30 +823,34 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                       Revision proposal #{revision.revisionNumber}
                     </p>
 
-                    <p className="text-sm text-slate-500">{revision.reason}</p>
+                    <p className="mt-1 text-sm text-slate-500">{revision.reason}</p>
 
-                    <p className="mt-1 text-xs font-bold uppercase">
+                    <p className="mt-2 text-xs font-bold uppercase tracking-wide">
                       {revision.status}
                     </p>
                   </div>
 
                   {revision.status === "proposed" && isAdmin ? (
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row">
                       <button
                         type="button"
                         disabled={mutation.isPending}
                         onClick={() =>
                           mutation.mutate({
                             type: "approve-revision",
+
                             payload: {
                               matchId,
+
                               revisionNumber: revision.revisionNumber,
+
                               expectedMatchRevision: detail.match.currentRevision,
+
                               approvalReason: reason,
                             },
                           })
                         }
-                        className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-3 py-2 text-sm font-black text-slate-950 disabled:opacity-40"
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-3 py-2 text-sm font-black text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <CheckCircle2 size={16} />
                         Approve
@@ -668,14 +862,17 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                         onClick={() =>
                           mutation.mutate({
                             type: "reject-revision",
+
                             payload: {
                               matchId,
+
                               revisionNumber: revision.revisionNumber,
+
                               reason,
                             },
                           })
                         }
-                        className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-sm font-black text-white disabled:opacity-40"
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-sm font-black text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <XCircle size={16} />
                         Reject
@@ -685,9 +882,9 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                 </article>
               ))}
             </div>
-          ) : (
+          ) : !revisionsQuery.isPending && !revisionsQuery.isError ? (
             <p className="text-sm text-slate-500">No correction revisions exist.</p>
-          )}
+          ) : null}
         </section>
       ) : null}
     </div>
