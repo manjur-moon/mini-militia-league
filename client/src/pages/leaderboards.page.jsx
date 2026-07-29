@@ -239,7 +239,7 @@ function MobileLeaderboardCard({ entry, metric }) {
         </p>
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-2">
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-950">
           <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
             Matches
@@ -254,6 +254,14 @@ function MobileLeaderboardCard({ entry, metric }) {
           </p>
 
           <p className="mt-1 font-black">{entry.metrics.totalKills}</p>
+        </div>
+
+        <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-950">
+          <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+            Deaths
+          </p>
+
+          <p className="mt-1 font-black">{entry.metrics.totalDeaths}</p>
         </div>
 
         <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-950">
@@ -458,6 +466,8 @@ export function LeaderboardsPage() {
 
                     <th className="px-5 py-3">Kills</th>
 
+                    <th className="px-5 py-3">Deaths</th>
+
                     <th className="px-5 py-3">KDR</th>
                   </tr>
                 </thead>
@@ -498,6 +508,8 @@ export function LeaderboardsPage() {
                       <td className="px-5 py-4">{entry.metrics.matchesPlayed}</td>
 
                       <td className="px-5 py-4">{entry.metrics.totalKills}</td>
+
+                      <td className="px-5 py-4">{entry.metrics.totalDeaths}</td>
 
                       <td className="px-5 py-4">
                         {Number(entry.metrics.kdr).toFixed(2)}
