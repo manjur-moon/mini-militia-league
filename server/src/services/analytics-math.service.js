@@ -1,7 +1,11 @@
-import { calculateCoreMetrics, calculateKdr } from "./statistics.service.js";
+import {
+  calculateCoreMetrics,
+  calculateKdr,
+  isLastPlaceResult,
+} from "./statistics.service.js";
 import { formatLeagueDateKey } from "./period.service.js";
 
-export const ANALYTICS_CALCULATION_VERSION = "analytics-v1";
+export const ANALYTICS_CALCULATION_VERSION = "analytics-v2";
 export const DEFAULT_DECIMAL_PRECISION = 6;
 
 export function roundAnalytics(value, precision = DEFAULT_DECIMAL_PRECISION) {
@@ -121,7 +125,7 @@ export function buildDailyTrend(rows, period) {
     value.deaths += row.deaths;
     value.placementTotal += row.placement;
     if (row.placement === 1) value.firstPlaces += 1;
-    if (row.participantCount > 0 && row.placement === row.participantCount) {
+    if (isLastPlaceResult(row)) {
       value.lastPlaces += 1;
     }
     grouped.set(key, value);

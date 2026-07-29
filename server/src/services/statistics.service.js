@@ -1,27 +1,60 @@
 import mongoose from "mongoose";
 import { DateTime } from "luxon";
+
+import { env } from "../config/env.js";
 import { AuditLog } from "../models/audit-log.model.js";
 import { MatchResult } from "../models/match-result.model.js";
 import { Match } from "../models/match.model.js";
 import { MVPAward } from "../models/mvp-award.model.js";
 import { PlayerStatistics } from "../models/player-statistics.model.js";
 import { Player } from "../models/player.model.js";
-import { env } from "../config/env.js";
 import { AppError } from "../utils/app-error.js";
 
-export const CORE_STATISTICS_VERSION = "core-v1";
+export const CORE_STATISTICS_VERSION = "core-v2";
+
 const DECIMAL_PRECISION = 6;
 const RECALCULATION_BATCH_SIZE = 100;
 
 function round(value, precision = DECIMAL_PRECISION) {
-  if (!Number.isFinite(value)) return 0;
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
   const factor = 10 ** precision;
+
   return Math.round((value + Number.EPSILON) * factor) / factor;
 }
 
 export function calculateKdr(totalKills, totalDeaths) {
-  if (totalDeaths > 0) return round(totalKills / totalDeaths);
+  if (totalDeaths > 0) {
+    return round(totalKills / totalDeaths);
+  }
+
   return totalKills > 0 ? totalKills : 0;
+}
+
+/**
+ * Determines whether a result represents
+ * the final position in a match.
+ *
+ * Dense ranking can produce placements:
+ *
+ * 1, 2, 3, 4, 5, 5, 6, 7
+ *
+ * Here participantCount is 8, but the
+ * actual last-place rank is 7.
+ */
+export function isLastPlaceResult(row) {
+  const lastPlaceRank =
+    Number.isInteger(row.lastPlaceRank) && row.lastPlaceRank > 0
+      ? row.lastPlaceRank
+      : row.participantCount;
+
+  return (
+    Number.isInteger(lastPlaceRank) &&
+    lastPlaceRank > 0 &&
+    row.placement === lastPlaceRank
+  );
 }
 
 function matchKdr(kills, deaths) {
@@ -30,23 +63,32 @@ function matchKdr(kills, deaths) {
 
 export function calculateCoreMetrics(rows, mvpCount = 0) {
   const matchesPlayed = rows.length;
+
   const totalKills = rows.reduce((total, row) => total + row.kills, 0);
+
   const totalDeaths = rows.reduce((total, row) => total + row.deaths, 0);
+
   const placementTotal = rows.reduce((total, row) => total + row.placement, 0);
+
   const firstPlaceCount = rows.filter((row) => row.placement === 1).length;
-  const lastPlaceCount = rows.filter(
-    (row) => row.participantCount > 0 && row.placement === row.participantCount,
-  ).length;
+
+  const lastPlaceCount = rows.filter(isLastPlaceResult).length;
 
   return {
     matchesPlayed,
     totalKills,
     totalDeaths,
+
     kdr: calculateKdr(totalKills, totalDeaths),
+
     averageKills: matchesPlayed ? round(totalKills / matchesPlayed) : 0,
+
     averageDeaths: matchesPlayed ? round(totalDeaths / matchesPlayed) : 0,
+
     averageRank: matchesPlayed ? round(placementTotal / matchesPlayed) : 0,
+
     winRate: matchesPlayed ? round((firstPlaceCount / matchesPlayed) * 100) : 0,
+
     firstPlaceCount,
     lastPlaceCount,
     mvpCount,
@@ -63,9 +105,17 @@ function record(value = 0, row = null) {
 
 function compareRecordRows(left, right, valueSelector) {
   const valueDifference = valueSelector(right) - valueSelector(left);
-  if (valueDifference !== 0) return valueDifference;
+
+  if (valueDifference !== 0) {
+    return valueDifference;
+  }
+
   const dateDifference = new Date(left.matchDate) - new Date(right.matchDate);
-  if (dateDifference !== 0) return dateDifference;
+
+  if (dateDifference !== 0) {
+    return dateDifference;
+  }
+
   return String(left.matchId).localeCompare(String(right.matchId));
 }
 
@@ -76,7 +126,9 @@ function leagueDateKey(date, timezone) {
     month: "2-digit",
     day: "2-digit",
   }).formatToParts(new Date(date));
+
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+
   return `${values.year}-${values.month}-${values.day}`;
 }
 
@@ -92,33 +144,57 @@ export function calculatePersonalRecords(
       bestKdr: record(),
       longestMvpStreak,
       longestFirstPlaceStreak: 0,
-      mostMatchesInOneDay: { value: 0, date: null },
+
+      mostMatchesInOneDay: {
+        value: 0,
+        date: null,
+      },
     };
   }
 
-  const highestKillsRow = [...rows].sort((a, b) =>
-    compareRecordRows(a, b, (row) => row.kills),
+  const highestKillsRow = [...rows].sort((left, right) =>
+    compareRecordRows(left, right, (row) => row.kills),
   )[0];
-  const highestDeathsRow = [...rows].sort((a, b) =>
-    compareRecordRows(a, b, (row) => row.deaths),
+
+  const highestDeathsRow = [...rows].sort((left, right) =>
+    compareRecordRows(left, right, (row) => row.deaths),
   )[0];
-  const bestKdrRow = [...rows].sort((a, b) => {
-    const ratioDifference = matchKdr(b.kills, b.deaths) - matchKdr(a.kills, a.deaths);
-    if (ratioDifference !== 0) return ratioDifference;
-    if (b.kills !== a.kills) return b.kills - a.kills;
-    if (a.deaths !== b.deaths) return a.deaths - b.deaths;
-    return new Date(a.matchDate) - new Date(b.matchDate);
+
+  const bestKdrRow = [...rows].sort((left, right) => {
+    const ratioDifference =
+      matchKdr(right.kills, right.deaths) - matchKdr(left.kills, left.deaths);
+
+    if (ratioDifference !== 0) {
+      return ratioDifference;
+    }
+
+    if (right.kills !== left.kills) {
+      return right.kills - left.kills;
+    }
+
+    if (left.deaths !== right.deaths) {
+      return left.deaths - right.deaths;
+    }
+
+    return new Date(left.matchDate) - new Date(right.matchDate);
   })[0];
 
-  const orderedRows = [...rows].sort((a, b) => {
-    const dateDifference = new Date(a.matchDate) - new Date(b.matchDate);
-    if (dateDifference !== 0) return dateDifference;
-    return String(a.matchId).localeCompare(String(b.matchId));
+  const orderedRows = [...rows].sort((left, right) => {
+    const dateDifference = new Date(left.matchDate) - new Date(right.matchDate);
+
+    if (dateDifference !== 0) {
+      return dateDifference;
+    }
+
+    return String(left.matchId).localeCompare(String(right.matchId));
   });
+
   let currentFirstPlaceStreak = 0;
   let longestFirstPlaceStreak = 0;
+
   for (const row of orderedRows) {
     currentFirstPlaceStreak = row.placement === 1 ? currentFirstPlaceStreak + 1 : 0;
+
     longestFirstPlaceStreak = Math.max(
       longestFirstPlaceStreak,
       currentFirstPlaceStreak,
@@ -126,10 +202,13 @@ export function calculatePersonalRecords(
   }
 
   const dailyCounts = new Map();
+
   for (const row of rows) {
     const key = leagueDateKey(row.matchDate, timezone);
+
     dailyCounts.set(key, (dailyCounts.get(key) ?? 0) + 1);
   }
+
   const [mostActiveDate, mostMatches] = [...dailyCounts.entries()].sort(
     ([leftDate, leftCount], [rightDate, rightCount]) =>
       rightCount - leftCount || leftDate.localeCompare(rightDate),
@@ -137,12 +216,17 @@ export function calculatePersonalRecords(
 
   return {
     highestKills: record(highestKillsRow.kills, highestKillsRow),
+
     highestDeaths: record(highestDeathsRow.deaths, highestDeathsRow),
+
     bestKdr: record(matchKdr(bestKdrRow.kills, bestKdrRow.deaths), bestKdrRow),
+
     longestMvpStreak,
     longestFirstPlaceStreak,
+
     mostMatchesInOneDay: {
       value: mostMatches,
+
       date: new Date(`${mostActiveDate}T00:00:00.000Z`),
     },
   };
@@ -152,33 +236,50 @@ export function calculateLongestMvpStreak(awards, timezone = env.LEAGUE_TIMEZONE
   const weeklyAwards = awards
     .filter((award) => award.awardType === "weekly")
     .sort((left, right) => new Date(left.startAt) - new Date(right.startAt));
+
   let longest = 0;
   let current = 0;
   let previousStart = null;
+
   for (const award of weeklyAwards) {
-    const start = DateTime.fromJSDate(new Date(award.startAt), { zone: timezone });
+    const start = DateTime.fromJSDate(new Date(award.startAt), {
+      zone: timezone,
+    });
+
     const isConsecutive =
       previousStart && Math.round(start.diff(previousStart, "days").days) === 7;
+
     current = isConsecutive ? current + 1 : 1;
+
     longest = Math.max(longest, current);
+
     previousStart = start;
   }
+
   return longest;
 }
 
 function serializeStatistics(document) {
-  if (!document) return null;
+  if (!document) {
+    return null;
+  }
+
   const value =
     typeof document.toObject === "function" ? document.toObject() : document;
+
   return {
     id: String(value._id),
     playerId: String(value.playerId),
     metrics: value.metrics,
     records: value.records,
     globalRank: value.globalRank,
+
     calculationVersion: value.calculationVersion,
+
     sourceVerifiedMatchCount: value.sourceVerifiedMatchCount,
+
     lastVerifiedMatchAt: value.lastVerifiedMatchAt,
+
     recalculatedAt: value.recalculatedAt,
   };
 }
@@ -196,22 +297,33 @@ async function writeRecalculationAudit({
   result,
   requestMeta,
 }) {
-  if (!actor) return;
+  if (!actor) {
+    return;
+  }
+
   await AuditLogModel.create({
     actorUserId: actor.id,
     action: "statistics.recalculated",
     entityType: "statistics",
     entityId: `${scope}:${entityId}`,
     previousValue: null,
+
     newValue: {
       scope,
+
       calculationVersion: CORE_STATISTICS_VERSION,
+
       updatedPlayers: result.updatedPlayers,
+
       playerIds: result.playerIds ?? [],
     },
+
     reason,
+
     ipAddress: requestMeta?.ipAddress ?? null,
+
     userAgent: requestMeta?.userAgent ?? null,
+
     requestId: requestMeta?.requestId ?? null,
   });
 }
@@ -220,32 +332,57 @@ export function createStatisticsService({
   PlayerModel = Player,
   MatchModel = Match,
   MatchResultModel = MatchResult,
+
   PlayerStatisticsModel = PlayerStatistics,
+
   MVPAwardModel = MVPAward,
   AuditLogModel = AuditLog,
 } = {}) {
   async function recalculateGlobalRanks({ session } = {}) {
     const query = PlayerStatisticsModel.find({})
-      .select({ _id: 1 })
+      .select({
+        _id: 1,
+      })
       .sort({
         "metrics.totalKills": -1,
         "metrics.kdr": -1,
+
         "metrics.firstPlaceCount": -1,
+
         "metrics.matchesPlayed": -1,
+
         playerId: 1,
       })
       .lean();
+
     const statistics = await queryWithSession(query, session);
-    if (!statistics.length) return 0;
+
+    if (!statistics.length) {
+      return 0;
+    }
+
     await PlayerStatisticsModel.bulkWrite(
       statistics.map((item, index) => ({
         updateOne: {
-          filter: { _id: item._id },
-          update: { $set: { globalRank: index + 1 } },
+          filter: {
+            _id: item._id,
+          },
+
+          update: {
+            $set: {
+              globalRank: index + 1,
+            },
+          },
         },
       })),
-      session ? { session } : {},
+
+      session
+        ? {
+            session,
+          }
+        : {},
     );
+
     return statistics.length;
   }
 
@@ -256,105 +393,254 @@ export function createStatisticsService({
     const uniqueIds = [
       ...new Set(playerIds.filter(Boolean).map((value) => String(value))),
     ].map((value) => new mongoose.Types.ObjectId(value));
-    if (!uniqueIds.length) return { updatedPlayers: 0, playerIds: [] };
 
-    const playerQuery = PlayerModel.find({ _id: { $in: uniqueIds } })
-      .select({ _id: 1 })
+    if (!uniqueIds.length) {
+      return {
+        updatedPlayers: 0,
+        playerIds: [],
+      };
+    }
+
+    const playerQuery = PlayerModel.find({
+      _id: {
+        $in: uniqueIds,
+      },
+    })
+      .select({
+        _id: 1,
+      })
       .lean();
+
     const players = await queryWithSession(playerQuery, session);
-    if (!players.length) return { updatedPlayers: 0, playerIds: [] };
+
+    if (!players.length) {
+      return {
+        updatedPlayers: 0,
+        playerIds: [],
+      };
+    }
+
     const existingIds = players.map((player) => String(player._id));
 
     const resultQuery = MatchResultModel.find({
       status: "verified",
-      "official.playerId": { $in: players.map((player) => player._id) },
+
+      "official.playerId": {
+        $in: players.map((player) => player._id),
+      },
     })
-      .select({ matchId: 1, official: 1, officialMatchDate: 1 })
-      .sort({ officialMatchDate: 1, matchId: 1 })
+      .select({
+        matchId: 1,
+        official: 1,
+        officialMatchDate: 1,
+      })
+      .sort({
+        officialMatchDate: 1,
+        matchId: 1,
+      })
       .lean();
+
     const results = await queryWithSession(resultQuery, session);
+
     const matchIds = [...new Set(results.map((row) => String(row.matchId)))].map(
       (value) => new mongoose.Types.ObjectId(value),
     );
-    const matchQuery = MatchModel.find({ _id: { $in: matchIds }, status: "verified" })
-      .select({ _id: 1, participantCount: 1 })
+
+    const matchQuery = MatchModel.find({
+      _id: {
+        $in: matchIds,
+      },
+
+      status: "verified",
+    })
+      .select({
+        _id: 1,
+        participantCount: 1,
+      })
       .lean();
+
     const matches = await queryWithSession(matchQuery, session);
+
     const participantCounts = new Map(
       matches.map((match) => [String(match._id), match.participantCount]),
     );
 
+    /*
+     * Find the maximum official placement
+     * assigned in each match.
+     *
+     * This is the real last-place rank when
+     * dense ranking contains tied positions.
+     */
+    const lastPlaceRankAggregation = MatchResultModel.aggregate([
+      {
+        $match: {
+          matchId: {
+            $in: matchIds,
+          },
+
+          status: "verified",
+        },
+      },
+
+      {
+        $group: {
+          _id: "$matchId",
+
+          lastPlaceRank: {
+            $max: "$official.placement",
+          },
+        },
+      },
+    ]);
+
+    if (session) {
+      lastPlaceRankAggregation.session(session);
+    }
+
+    const lastPlaceRankRows = await lastPlaceRankAggregation;
+
+    const lastPlaceRanks = new Map(
+      lastPlaceRankRows.map((row) => [String(row._id), row.lastPlaceRank]),
+    );
+
     const awardQuery = MVPAwardModel.find({
-      playerId: { $in: players.map((player) => player._id) },
+      playerId: {
+        $in: players.map((player) => player._id),
+      },
+
       status: "current",
     })
-      .select({ playerId: 1, awardType: 1, startAt: 1 })
-      .sort({ startAt: 1 })
+      .select({
+        playerId: 1,
+        awardType: 1,
+        startAt: 1,
+      })
+      .sort({
+        startAt: 1,
+      })
       .lean();
+
     const awards = await queryWithSession(awardQuery, session);
+
     const awardsByPlayer = new Map(existingIds.map((id) => [id, []]));
+
     for (const award of awards) {
       const id = String(award.playerId);
-      if (awardsByPlayer.has(id)) awardsByPlayer.get(id).push(award);
+
+      if (awardsByPlayer.has(id)) {
+        awardsByPlayer.get(id).push(award);
+      }
     }
+
     const mvpCounts = new Map(
       [...awardsByPlayer.entries()].map(([id, playerAwards]) => [
         id,
         playerAwards.length,
       ]),
     );
+
     const mvpStreaks = new Map(
       [...awardsByPlayer.entries()].map(([id, playerAwards]) => [
         id,
+
         calculateLongestMvpStreak(playerAwards),
       ]),
     );
 
     const groupedRows = new Map(existingIds.map((id) => [id, []]));
+
     for (const result of results) {
       const id = String(result.official.playerId);
-      if (!groupedRows.has(id)) continue;
+
+      if (!groupedRows.has(id)) {
+        continue;
+      }
+
+      const matchId = String(result.matchId);
+
       groupedRows.get(id).push({
         matchId: result.matchId,
+
         matchDate: result.officialMatchDate,
+
         kills: result.official.kills,
+
         deaths: result.official.deaths,
+
         placement: result.official.placement,
-        participantCount: participantCounts.get(String(result.matchId)) ?? 0,
+
+        participantCount: participantCounts.get(matchId) ?? 0,
+
+        lastPlaceRank: lastPlaceRanks.get(matchId) ?? 0,
       });
     }
 
     const recalculatedAt = new Date();
+
     await PlayerStatisticsModel.bulkWrite(
       existingIds.map((playerId) => {
         const rows = groupedRows.get(playerId) ?? [];
+
         return {
           updateOne: {
-            filter: { playerId: new mongoose.Types.ObjectId(playerId) },
+            filter: {
+              playerId: new mongoose.Types.ObjectId(playerId),
+            },
+
             update: {
               $set: {
-                metrics: calculateCoreMetrics(rows, mvpCounts.get(playerId) ?? 0),
+                metrics: calculateCoreMetrics(
+                  rows,
+
+                  mvpCounts.get(playerId) ?? 0,
+                ),
+
                 records: calculatePersonalRecords(
                   rows,
+
                   env.LEAGUE_TIMEZONE,
+
                   mvpStreaks.get(playerId) ?? 0,
                 ),
+
                 calculationVersion: CORE_STATISTICS_VERSION,
+
                 sourceVerifiedMatchCount: rows.length,
+
                 lastVerifiedMatchAt: rows.at(-1)?.matchDate ?? null,
+
                 recalculatedAt,
               },
-              $setOnInsert: { playerId: new mongoose.Types.ObjectId(playerId) },
+
+              $setOnInsert: {
+                playerId: new mongoose.Types.ObjectId(playerId),
+              },
             },
+
             upsert: true,
           },
         };
       }),
-      session ? { session } : {},
+
+      session
+        ? {
+            session,
+          }
+        : {},
     );
 
-    if (refreshRanks) await recalculateGlobalRanks({ session });
-    return { updatedPlayers: existingIds.length, playerIds: existingIds };
+    if (refreshRanks) {
+      await recalculateGlobalRanks({
+        session,
+      });
+    }
+
+    return {
+      updatedPlayers: existingIds.length,
+
+      playerIds: existingIds,
+    };
   }
 
   return Object.freeze({
@@ -366,11 +652,15 @@ export function createStatisticsService({
         matchId,
         status: "verified",
       })
-        .select({ "official.playerId": 1 })
+        .select({
+          "official.playerId": 1,
+        })
         .lean();
+
       const result = await recalculateForPlayerIds(
         rows.map((row) => row.official.playerId),
       );
+
       await writeRecalculationAudit({
         AuditLogModel,
         actor,
@@ -380,11 +670,13 @@ export function createStatisticsService({
         result,
         requestMeta,
       });
+
       return result;
     },
 
     async recalculateForPlayer(playerId, { actor, reason, requestMeta } = {}) {
       const result = await recalculateForPlayerIds([playerId]);
+
       await writeRecalculationAudit({
         AuditLogModel,
         actor,
@@ -394,27 +686,43 @@ export function createStatisticsService({
         result,
         requestMeta,
       });
+
       return result;
     },
 
     async recalculateAll({ actor, reason, requestMeta } = {}) {
-      const players = await PlayerModel.find({}).select({ _id: 1 }).lean();
+      const players = await PlayerModel.find({})
+        .select({
+          _id: 1,
+        })
+        .lean();
+
       let updatedPlayers = 0;
+
       for (let index = 0; index < players.length; index += RECALCULATION_BATCH_SIZE) {
         const batch = players.slice(index, index + RECALCULATION_BATCH_SIZE);
+
         const result = await recalculateForPlayerIds(
           batch.map((player) => player._id),
-          { refreshRanks: false },
+
+          {
+            refreshRanks: false,
+          },
         );
+
         updatedPlayers += result.updatedPlayers;
       }
+
       await recalculateGlobalRanks();
+
       const result = {
         calculationVersion: CORE_STATISTICS_VERSION,
+
         updatedPlayers,
         playerIds: [],
         completedAt: new Date(),
       };
+
       await writeRecalculationAudit({
         AuditLogModel,
         actor,
@@ -424,29 +732,43 @@ export function createStatisticsService({
         result,
         requestMeta,
       });
+
       return result;
     },
 
     async getPlayerStatisticsByCode(playerCode) {
-      const player = await PlayerModel.findOne({ playerId: playerCode })
-        .select({ _id: 1, playerId: 1, name: 1 })
+      const player = await PlayerModel.findOne({
+        playerId: playerCode,
+      })
+        .select({
+          _id: 1,
+          playerId: 1,
+          name: 1,
+        })
         .lean();
+
       if (!player) {
         throw new AppError({
           statusCode: 404,
           code: "PLAYER_NOT_FOUND",
+
           message: "Player profile was not found.",
         });
       }
+
       const statistics = await PlayerStatisticsModel.findOne({
         playerId: player._id,
       }).lean();
+
       return {
         player: {
           id: String(player._id),
+
           playerId: player.playerId,
+
           name: player.name,
         },
+
         statistics: serializeStatistics(statistics),
       };
     },
@@ -457,35 +779,69 @@ export function createStatisticsService({
           {
             $group: {
               _id: null,
-              playersWithStatistics: { $sum: 1 },
-              totalKills: { $sum: "$metrics.totalKills" },
-              totalDeaths: { $sum: "$metrics.totalDeaths" },
-              totalPlayerMatchEntries: { $sum: "$metrics.matchesPlayed" },
-              totalFirstPlaces: { $sum: "$metrics.firstPlaceCount" },
-              latestRecalculatedAt: { $max: "$recalculatedAt" },
+
+              playersWithStatistics: {
+                $sum: 1,
+              },
+
+              totalKills: {
+                $sum: "$metrics.totalKills",
+              },
+
+              totalDeaths: {
+                $sum: "$metrics.totalDeaths",
+              },
+
+              totalPlayerMatchEntries: {
+                $sum: "$metrics.matchesPlayed",
+              },
+
+              totalFirstPlaces: {
+                $sum: "$metrics.firstPlaceCount",
+              },
+
+              latestRecalculatedAt: {
+                $max: "$recalculatedAt",
+              },
             },
           },
         ]),
-        MatchModel.countDocuments({ status: "verified" }),
+
         MatchModel.countDocuments({
           status: "verified",
-          "statisticsRecalculation.status": { $ne: "completed" },
+        }),
+
+        MatchModel.countDocuments({
+          status: "verified",
+
+          "statisticsRecalculation.status": {
+            $ne: "completed",
+          },
         }),
       ]);
+
       const value = summary[0] ?? {
         playersWithStatistics: 0,
         totalKills: 0,
         totalDeaths: 0,
+
         totalPlayerMatchEntries: 0,
+
         totalFirstPlaces: 0,
+
         latestRecalculatedAt: null,
       };
+
       return {
         ...value,
         totalVerifiedMatches,
+
         leagueKdr: calculateKdr(value.totalKills, value.totalDeaths),
+
         staleVerifiedMatches,
+
         calculationVersion: CORE_STATISTICS_VERSION,
+
         timezone: env.LEAGUE_TIMEZONE,
       };
     },

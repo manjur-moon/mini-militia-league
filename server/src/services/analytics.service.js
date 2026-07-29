@@ -267,10 +267,22 @@ export function createAnalyticsService({
   async function fetchVerifiedRows(period, playerIds = null) {
     const filter = {
       status: "verified",
-      officialMatchDate: { $gte: period.startAt, $lt: period.endAt },
+
+      officialMatchDate: {
+        $gte: period.startAt,
+        $lt: period.endAt,
+      },
     };
-    if (period.seasonId) filter.officialSeasonId = period.seasonId;
-    if (playerIds?.length) filter["official.playerId"] = { $in: playerIds };
+
+    if (period.seasonId) {
+      filter.officialSeasonId = period.seasonId;
+    }
+
+    if (playerIds?.length) {
+      filter["official.playerId"] = {
+        $in: playerIds,
+      };
+    }
 
     const results = await MatchResultModel.find(filter)
       .select({
@@ -280,37 +292,93 @@ export function createAnalyticsService({
         officialSeasonId: 1,
         updatedAt: 1,
       })
-      .sort({ officialMatchDate: 1, matchId: 1, rowIndex: 1 })
+      .sort({
+        officialMatchDate: 1,
+        matchId: 1,
+        rowIndex: 1,
+      })
       .lean();
-    if (!results.length) return [];
+
+    if (!results.length) {
+      return [];
+    }
+
+    /*
+     * Dense ranking may produce fewer
+     * placement numbers than participants.
+     *
+     * Example:
+     * 1, 2, 3, 4, 5, 5, 6, 7
+     *
+     * The maximum official placement for
+     * each match is therefore the real
+     * last-place rank.
+     */
+    const lastPlaceRanks = new Map();
+
+    for (const result of results) {
+      const matchId = String(result.matchId);
+
+      const placement = Number(result.official.placement);
+
+      const currentMaximum = lastPlaceRanks.get(matchId) ?? 0;
+
+      if (Number.isInteger(placement) && placement > currentMaximum) {
+        lastPlaceRanks.set(matchId, placement);
+      }
+    }
 
     const matchIds = [...new Set(results.map((row) => String(row.matchId)))].map(
       (id) => new mongoose.Types.ObjectId(id),
     );
+
     const matches = await MatchModel.find({
-      _id: { $in: matchIds },
+      _id: {
+        $in: matchIds,
+      },
+
       status: "verified",
     })
-      .select({ _id: 1, matchCode: 1, participantCount: 1, matchDate: 1 })
+      .select({
+        _id: 1,
+        matchCode: 1,
+        participantCount: 1,
+        matchDate: 1,
+      })
       .lean();
+
     const matchMap = new Map(matches.map((match) => [String(match._id), match]));
 
     return results
       .filter((result) => matchMap.has(String(result.matchId)))
       .map((result) => {
-        const match = matchMap.get(String(result.matchId));
+        const matchId = String(result.matchId);
+
+        const match = matchMap.get(matchId);
+
         return {
           resultId: result._id,
           matchId: result.matchId,
           matchCode: match.matchCode,
+
           playerId: result.official.playerId,
+
           playerName: result.official.playerName,
+
           matchDate: result.officialMatchDate,
+
           kills: result.official.kills,
+
           deaths: result.official.deaths,
+
           placement: result.official.placement,
+
           participantCount: match.participantCount,
+
+          lastPlaceRank: lastPlaceRanks.get(matchId) ?? 0,
+
           seasonId: result.officialSeasonId,
+
           updatedAt: result.updatedAt,
         };
       });
