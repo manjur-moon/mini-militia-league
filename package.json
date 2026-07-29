@@ -24,6 +24,10 @@
     "test": "npm --prefix server test && npm --prefix client test",
     "test:server": "npm --prefix server test",
     "test:client": "npm --prefix client test",
+    "test:coverage": "npm --prefix server run test:coverage && npm --prefix client run test:coverage",
+    "test:critical": "npm --prefix server run test:critical && npm --prefix client run test:critical",
+    "qa:static": "node scripts/qa/static-quality-check.mjs",
+    "deployment:validate": "node scripts/deployment/validate-config.mjs",
     "qa": "npm run lint && npm run format:check && npm run test && npm run build && npm run qa:static && npm run deployment:validate"
   },
   "devDependencies": {
