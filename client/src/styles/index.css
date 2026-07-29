@@ -1,10 +1,17 @@
+@import url("https://api.fontshare.com/v2/css?f[]=switzer@300,400,500,600,700,800,900&display=swap");
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+@theme {
+  --font-sans:
+    "Switzer", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
 :root {
   font-family:
-    Inter,
+    "Switzer",
     ui-sans-serif,
     system-ui,
     -apple-system,
@@ -24,11 +31,14 @@ html {
 html.dark {
   background: #020617;
 }
+
 body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
+  font-family: inherit;
 }
+
 button,
 a,
 input,
@@ -36,8 +46,11 @@ select,
 textarea {
   -webkit-tap-highlight-color: transparent;
 }
+
 button,
-select {
+input,
+select,
+textarea {
   font: inherit;
 }
 
@@ -49,8 +62,12 @@ select {
   border-radius: 1rem;
   background: rgb(255 255 255 / 0.9);
   padding: 1rem;
+  backdrop-filter: 1rem;
+  background: rgb(255 255 255 / 0.9);
+  padding: 1rem;
   backdrop-filter: blur(12px);
 }
+
 .dark .status-card {
   border-color: #334155;
   background: rgb(15 23 42 / 0.9);
