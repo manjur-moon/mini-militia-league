@@ -1,5 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { Activity, CalendarDays, Crown, Medal, Trophy } from "lucide-react";
+import {
+  Activity,
+  CalendarDays,
+  Crown,
+  Eye,
+  EyeOff,
+  Medal,
+  Trophy,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -7,6 +15,8 @@ import { EmptyState } from "@/components/ui/empty-state.jsx";
 import { ErrorState } from "@/components/ui/error-state.jsx";
 import { LoadingState } from "@/components/ui/loading-state.jsx";
 import { getLeaderboard } from "@/services/analytics.service.js";
+
+const DAILY_INFO_VISIBILITY_KEY = "leaderboard-daily-info-visible";
 
 const periodOptions = [
   {
@@ -62,6 +72,32 @@ const metricOptions = [
   },
 ];
 
+function readDailyInfoVisibility() {
+  if (typeof window === "undefined") {
+    return true;
+  }
+
+  try {
+    const savedValue = window.localStorage.getItem(DAILY_INFO_VISIBILITY_KEY);
+
+    return savedValue !== "false";
+  } catch {
+    return true;
+  }
+}
+
+function saveDailyInfoVisibility(value) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(DAILY_INFO_VISIBILITY_KEY, String(value));
+  } catch {
+    // Ignore storage errors.
+  }
+}
+
 function formatValue(metric, value) {
   if (["kdr", "win_rate", "average_rank", "overall"].includes(metric)) {
     return Number(value ?? 0).toFixed(2);
@@ -71,7 +107,9 @@ function formatValue(metric, value) {
 }
 
 function formatStartHour(hour) {
-  const normalizedHour = Number.isInteger(Number(hour)) ? Number(hour) : 7;
+  const parsedHour = Number(hour);
+
+  const normalizedHour = Number.isInteger(parsedHour) ? parsedHour : 7;
 
   const hourInTwelveHourFormat = normalizedHour % 12 || 12;
 
@@ -106,6 +144,64 @@ function PlayerAvatar({ player }) {
         player.name.slice(0, 1).toUpperCase()
       )}
     </span>
+  );
+}
+
+function DailyLeaderboardInfo({ startHourLabel, isVisible, onToggle }) {
+  if (!isVisible) {
+    return (
+      <div className="flex justify-end md:col-span-3">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded="false"
+          aria-controls="daily-league-info"
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-600 outline-none transition hover:border-sky-400 hover:text-sky-700 focus-visible:ring-2 focus-visible:ring-sky-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:border-sky-700 dark:hover:text-sky-300"
+        >
+          <Eye size={16} aria-hidden="true" />
+          Show daily info
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="md:col-span-3">
+      <div
+        id="daily-league-info"
+        className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-200"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <CalendarDays size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
+
+            <div className="min-w-0">
+              <p className="font-black">
+                League day: {startHourLabel} to the next {startHourLabel}
+              </p>
+
+              <p className="mt-1 leading-6">
+                Matches before {startHourLabel} belong to the previous league day. Daily
+                rankings require at least one verified match.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded="true"
+            aria-controls="daily-league-info"
+            aria-label="Hide daily leaderboard information"
+            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-sky-300 bg-white/70 px-3 py-2 text-xs font-black text-sky-800 outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-sky-500 dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-200 dark:hover:bg-sky-950"
+          >
+            <EyeOff size={16} aria-hidden="true" />
+
+            <span className="hidden sm:inline">Hide info</span>
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -178,7 +274,10 @@ export function LeaderboardsPage() {
   const [metric, setMetric] = useState("overall");
 
   const [date, setDate] = useState("");
+
   const [page, setPage] = useState(1);
+
+  const [isDailyInfoVisible, setIsDailyInfoVisible] = useState(readDailyInfoVisibility);
 
   const params = useMemo(
     () => ({
@@ -198,6 +297,7 @@ export function LeaderboardsPage() {
 
   const query = useQuery({
     queryKey: ["leaderboard", params],
+
     queryFn: () => getLeaderboard(params),
 
     placeholderData: (previousData) => previousData,
@@ -220,6 +320,16 @@ export function LeaderboardsPage() {
     if (nextPeriodType === "all_time") {
       setDate("");
     }
+  }
+
+  function toggleDailyInfo() {
+    setIsDailyInfoVisible((currentValue) => {
+      const nextValue = !currentValue;
+
+      saveDailyInfoVisibility(nextValue);
+
+      return nextValue;
+    });
   }
 
   return (
@@ -259,6 +369,7 @@ export function LeaderboardsPage() {
             value={metric}
             onChange={(event) => {
               setMetric(event.target.value);
+
               setPage(1);
             }}
             className="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 dark:border-slate-700 dark:bg-slate-950"
@@ -279,6 +390,7 @@ export function LeaderboardsPage() {
             disabled={dateDisabled}
             onChange={(event) => {
               setDate(event.target.value);
+
               setPage(1);
             }}
             className="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950"
@@ -286,22 +398,11 @@ export function LeaderboardsPage() {
         </label>
 
         {periodType === "daily" ? (
-          <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800 md:col-span-3 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-200">
-            <div className="flex items-start gap-3">
-              <CalendarDays size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
-
-              <div>
-                <p className="font-black">
-                  League day: {leagueDayStartLabel} to the next {leagueDayStartLabel}
-                </p>
-
-                <p className="mt-1 leading-6">
-                  Matches before {leagueDayStartLabel} belong to the previous league
-                  day. Daily rankings require at least one verified match.
-                </p>
-              </div>
-            </div>
-          </div>
+          <DailyLeaderboardInfo
+            startHourLabel={leagueDayStartLabel}
+            isVisible={isDailyInfoVisible}
+            onToggle={toggleDailyInfo}
+          />
         ) : null}
       </div>
 
@@ -343,7 +444,6 @@ export function LeaderboardsPage() {
               </span>
             </div>
 
-            {/* Desktop and tablet table */}
             <div className="hidden overflow-x-auto md:block">
               <table className="min-w-full text-left">
                 <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 dark:bg-slate-950">
@@ -409,7 +509,6 @@ export function LeaderboardsPage() {
             </div>
           </div>
 
-          {/* Mobile cards */}
           <div className="grid gap-3 md:hidden">
             {query.data.data.map((entry) => (
               <MobileLeaderboardCard
