@@ -120,7 +120,7 @@ function formatStartHour(hour) {
 
 function RankIcon({ rank }) {
   if (rank === 1) {
-    return <Crown size={19} className="text-amber-500" aria-hidden="true" />;
+    return <Crown size={19} className="text-cyan-400" aria-hidden="true" />;
   }
 
   if (rank <= 3) {
@@ -132,7 +132,7 @@ function RankIcon({ rank }) {
 
 function PlayerAvatar({ player }) {
   return (
-    <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-slate-200 font-black dark:bg-slate-800">
+    <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl border border-slate-200 bg-slate-100 font-black dark:border-slate-700 dark:bg-[#0b1d30]">
       {player.photoUrl ? (
         <img
           src={player.photoUrl}
@@ -156,7 +156,7 @@ function DailyLeaderboardInfo({ startHourLabel, isVisible, onToggle }) {
           onClick={onToggle}
           aria-expanded="false"
           aria-controls="daily-league-info"
-          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-600 outline-none transition hover:border-sky-400 hover:text-sky-700 focus-visible:ring-2 focus-visible:ring-sky-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:border-sky-700 dark:hover:text-sky-300"
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-600 outline-none transition hover:border-amber-400 hover:text-amber-700 focus-visible:ring-2 focus-visible:ring-amber-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:border-amber-500 dark:hover:text-amber-300"
         >
           <Eye size={16} aria-hidden="true" />
           Show daily info
@@ -169,7 +169,7 @@ function DailyLeaderboardInfo({ startHourLabel, isVisible, onToggle }) {
     <div className="md:col-span-3">
       <div
         id="daily-league-info"
-        className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-200"
+        className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-slate-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-slate-200"
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-start gap-3">
@@ -193,7 +193,7 @@ function DailyLeaderboardInfo({ startHourLabel, isVisible, onToggle }) {
             aria-expanded="true"
             aria-controls="daily-league-info"
             aria-label="Hide daily leaderboard information"
-            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-sky-300 bg-white/70 px-3 py-2 text-xs font-black text-sky-800 outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-sky-500 dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-200 dark:hover:bg-sky-950"
+            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-amber-300 bg-white/70 px-3 py-2 text-xs font-black text-slate-800 outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-amber-500 dark:border-amber-500/40 dark:bg-slate-950/70 dark:text-slate-200 dark:hover:bg-slate-900"
           >
             <EyeOff size={16} aria-hidden="true" />
 
@@ -207,7 +207,7 @@ function DailyLeaderboardInfo({ startHourLabel, isVisible, onToggle }) {
 
 function MobileLeaderboardCard({ entry, metric }) {
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <article className="rounded-2xl border border-slate-200 bg-white p-4 transition-colors hover:border-cyan-300 dark:border-slate-800 dark:bg-[#08111f] dark:hover:border-cyan-500/50">
       <div className="flex items-start justify-between gap-3">
         <Link
           to={`/players/${entry.player.playerId}`}
@@ -229,8 +229,8 @@ function MobileLeaderboardCard({ entry, metric }) {
         </span>
       </div>
 
-      <div className="mt-4 rounded-2xl bg-amber-50 p-4 dark:bg-amber-950/20">
-        <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700 dark:text-amber-300">
+      <div className="mt-4 rounded-xl border border-cyan-200 bg-cyan-50/70 p-4 dark:border-cyan-500/20 dark:bg-cyan-500/[0.06]">
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-700 dark:text-cyan-300">
           Selected metric
         </p>
 
@@ -240,7 +240,7 @@ function MobileLeaderboardCard({ entry, metric }) {
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-950">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-[#050b16]">
           <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
             Matches
           </p>
@@ -248,23 +248,23 @@ function MobileLeaderboardCard({ entry, metric }) {
           <p className="mt-1 font-black">{entry.metrics.matchesPlayed}</p>
         </div>
 
-        <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-950">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-[#050b16]">
           <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
             Kills
           </p>
 
-          <p className="mt-1 font-black">{entry.metrics.totalKills}</p>
+          <p className="mt-1 font-black text-emerald-700 dark:text-emerald-400">{entry.metrics.totalKills}</p>
         </div>
 
-        <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-950">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-[#050b16]">
           <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
             Deaths
           </p>
 
-          <p className="mt-1 font-black">{entry.metrics.totalDeaths}</p>
+          <p className="mt-1 font-black text-red-700 dark:text-red-400">{entry.metrics.totalDeaths}</p>
         </div>
 
-        <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-950">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-[#050b16]">
           <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
             First Place
           </p>
@@ -272,7 +272,7 @@ function MobileLeaderboardCard({ entry, metric }) {
           <p className="mt-1 font-black">{entry.metrics.firstPlaceCount}</p>
         </div>
 
-        <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-950">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-[#050b16]">
           <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
             Last Place
           </p>
@@ -280,12 +280,12 @@ function MobileLeaderboardCard({ entry, metric }) {
           <p className="mt-1 font-black">{entry.metrics.lastPlaceCount}</p>
         </div>
 
-        <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-950">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-[#050b16]">
           <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
             KDR
           </p>
 
-          <p className="mt-1 font-black">{Number(entry.metrics.kdr).toFixed(2)}</p>
+          <p className="mt-1 font-black text-slate-900 dark:text-white">{Number(entry.metrics.kdr).toFixed(2)}</p>
         </div>
       </div>
     </article>
@@ -335,6 +335,7 @@ export function LeaderboardsPage() {
 
   const dateDisabled = periodType === "all_time";
 
+
   function handlePeriodChange(event) {
     const nextPeriodType = event.target.value;
 
@@ -359,7 +360,7 @@ export function LeaderboardsPage() {
   return (
     <section className="mx-auto max-w-7xl space-y-8 px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
       <div className="max-w-3xl">
-        <p className="text-sm font-black uppercase tracking-[0.22em] text-amber-700 dark:text-amber-300">
+        <p className="text-sm font-black uppercase tracking-[0.22em] text-cyan-600 dark:text-cyan-400">
           Verified competition
         </p>
 
@@ -371,13 +372,13 @@ export function LeaderboardsPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 md:grid-cols-3 dark:border-slate-800 dark:bg-slate-900">
-        <label className="grid gap-2 text-sm font-black">
+      <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 md:grid-cols-3 dark:border-slate-800 dark:bg-[#08111f] dark:shadow-none">
+        <label className="grid gap-2 text-sm font-black text-slate-700 dark:text-slate-200">
           Period
           <select
             value={periodType}
             onChange={handlePeriodChange}
-            className="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 dark:border-slate-700 dark:bg-slate-950"
+            className="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition-colors hover:border-slate-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/15 dark:border-slate-800 dark:bg-[#050b16] dark:text-white dark:hover:border-cyan-500/50"
           >
             {periodOptions.map((option) => (
               <option key={option.value} value={option.value}>
@@ -387,7 +388,7 @@ export function LeaderboardsPage() {
           </select>
         </label>
 
-        <label className="grid gap-2 text-sm font-black">
+        <label className="grid gap-2 text-sm font-black text-slate-700 dark:text-slate-200">
           Metric
           <select
             value={metric}
@@ -396,7 +397,7 @@ export function LeaderboardsPage() {
 
               setPage(1);
             }}
-            className="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 dark:border-slate-700 dark:bg-slate-950"
+            className="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition-colors hover:border-slate-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/15 dark:border-slate-800 dark:bg-[#050b16] dark:text-white dark:hover:border-cyan-500/50"
           >
             {metricOptions.map((option) => (
               <option key={option.value} value={option.value}>
@@ -406,7 +407,7 @@ export function LeaderboardsPage() {
           </select>
         </label>
 
-        <label className="grid gap-2 text-sm font-black">
+        <label className="grid gap-2 text-sm font-black text-slate-700 dark:text-slate-200">
           Reference date
           <input
             type="date"
@@ -417,17 +418,19 @@ export function LeaderboardsPage() {
 
               setPage(1);
             }}
-            className="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950"
+            className="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition-colors hover:border-slate-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-[#050b16] dark:text-white dark:hover:border-cyan-500/50"
           />
         </label>
 
-        {periodType === "daily" ? (
-          <DailyLeaderboardInfo
-            startHourLabel={leagueDayStartLabel}
-            isVisible={isDailyInfoVisible}
-            onToggle={toggleDailyInfo}
-          />
-        ) : null}
+        <div className="hidden" aria-hidden="true">
+          {periodType === "daily" ? (
+            <DailyLeaderboardInfo
+              startHourLabel={leagueDayStartLabel}
+              isVisible={isDailyInfoVisible}
+              onToggle={toggleDailyInfo}
+            />
+          ) : null}
+        </div>
       </div>
 
       {query.isFetching && !query.isPending ? (
@@ -444,102 +447,110 @@ export function LeaderboardsPage() {
 
       {query.data?.data?.length ? (
         <div className="space-y-4">
-          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5 dark:border-slate-800">
-              <div>
-                <p className="font-black text-amber-700 dark:text-amber-300">
-                  {periodMeta?.label ?? "Selected period"}
-                </p>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  Minimum {query.data.meta.minimumMatches} verified{" "}
-                  {query.data.meta.minimumMatches === 1 ? "match" : "matches"}
-                </p>
-
-                {periodType === "daily" ? (
-                  <p className="mt-1 text-xs font-bold text-slate-500">
-                    Timezone: {periodMeta?.timezone ?? "Asia/Dhaka"}
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-[#08111f] dark:shadow-none">
+            <div className="hidden" aria-hidden="true">
+              <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5 dark:border-slate-800">
+                <div>
+                  <p className="font-black text-cyan-700 dark:text-cyan-300">
+                    {periodMeta?.label ?? "Selected period"}
                   </p>
-                ) : null}
-              </div>
 
-              <span className="w-fit rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs font-black text-emerald-700 dark:text-emerald-300">
-                {query.data.meta.cacheHit ? "Cached" : "Recalculated"}
-              </span>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Minimum {query.data.meta.minimumMatches} verified{" "}
+                    {query.data.meta.minimumMatches === 1 ? "match" : "matches"}
+                  </p>
+
+                  {periodType === "daily" ? (
+                    <p className="mt-1 text-xs font-bold text-slate-500">
+                      Timezone: {periodMeta?.timezone ?? "Asia/Dhaka"}
+                    </p>
+                  ) : null}
+                </div>
+
+                <span className="w-fit rounded-full bg-amber-500/10 px-3 py-1.5 text-xs font-black text-cyan-700 dark:text-cyan-300">
+                  {query.data.meta.cacheHit ? "Cached" : "Recalculated"}
+                </span>
+              </div>
             </div>
 
             <div className="hidden overflow-x-auto md:block">
-              <table className="min-w-full text-left">
-                <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 dark:bg-slate-950">
+              <table className="min-w-full border-collapse text-left">
+                <thead className="border-b border-slate-200 bg-slate-100/80 text-[11px] uppercase tracking-[0.14em] text-slate-500 dark:border-slate-800 dark:bg-[#050b16] dark:text-slate-500">
                   <tr>
                     <th className="px-5 py-3">Rank</th>
-
                     <th className="px-5 py-3">Player</th>
-
                     <th className="px-5 py-3">Value</th>
-
                     <th className="px-5 py-3">Matches</th>
-
                     <th className="px-5 py-3">Kills</th>
-
                     <th className="px-5 py-3">Deaths</th>
-
                     <th className="px-5 py-3">First Place</th>
-
                     <th className="px-5 py-3">Last Place</th>
-
                     <th className="px-5 py-3">KDR</th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {query.data.data.map((entry) => (
+                  {query.data.data.map((entry, index) => (
                     <tr
                       key={entry.player.id}
-                      className="border-t border-slate-100 transition hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-950/50"
+                      className={`border-b border-slate-200 transition-colors last:border-b-0 dark:border-slate-800 ${
+                        index % 2 === 0
+                          ? "bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800/80"
+                          : "bg-slate-50/70 hover:bg-slate-100/80 dark:bg-slate-950/45 dark:hover:bg-slate-800/80"
+                      } ${entry.rank === 1 ? "shadow-[inset_3px_0_0_0_rgb(245_158_11)]" : ""}`}
                     >
-                      <td className="px-5 py-4">
+                      <td className="px-5 py-5 text-slate-700 dark:text-slate-200">
                         <span className="inline-flex items-center gap-2 font-black">
                           <RankIcon rank={entry.rank} />#{entry.rank}
                         </span>
                       </td>
 
-                      <td className="px-5 py-4">
+                      <td className="px-5 py-5 text-slate-700 dark:text-slate-200">
                         <Link
                           to={`/players/${entry.player.playerId}`}
-                          className="flex items-center gap-3 rounded-xl font-black outline-none transition hover:text-amber-600 focus-visible:ring-2 focus-visible:ring-amber-500"
+                          className="flex items-center gap-3 rounded-xl font-black text-slate-900 outline-none transition hover:text-cyan-600 focus-visible:ring-2 focus-visible:ring-cyan-500 dark:text-white dark:hover:text-cyan-300"
                         >
                           <PlayerAvatar player={entry.player} />
 
                           <span>
                             {entry.player.name}
 
-                            <small className="block font-bold text-slate-500">
+                            <small className="mt-0.5 block font-bold text-slate-500 dark:text-slate-400">
                               {entry.player.playerId}
                             </small>
                           </span>
                         </Link>
                       </td>
 
-                      <td className="px-5 py-4 text-lg font-black">
+                      <td className="px-5 py-5 text-lg font-black text-slate-900 dark:text-white">
                         {formatValue(metric, entry.value)}
                       </td>
 
-                      <td className="px-5 py-4">{entry.metrics.matchesPlayed}</td>
-
-                      <td className="px-5 py-4">{entry.metrics.totalKills}</td>
-
-                      <td className="px-5 py-4">{entry.metrics.totalDeaths}</td>
-
-                      <td className="px-5 py-4 font-bold">
-                        {entry.metrics.firstPlaceCount}
+                      <td className="px-5 py-5 text-slate-700 dark:text-slate-200">
+                        <span className="inline-flex min-w-9 justify-center rounded-md bg-slate-100 px-2.5 py-1 font-bold dark:bg-[#0b1d30] dark:text-slate-200">
+                          {entry.metrics.matchesPlayed}
+                        </span>
+                      </td>
+                      <td className="px-5 py-5 font-bold text-emerald-700 dark:text-emerald-400">
+                        {entry.metrics.totalKills}
+                      </td>
+                      <td className="px-5 py-5 font-bold text-red-700 dark:text-red-400">
+                        {entry.metrics.totalDeaths}
                       </td>
 
-                      <td className="px-5 py-4 font-bold">
-                        {entry.metrics.lastPlaceCount}
+                      <td className="px-5 py-5 font-bold text-slate-800 dark:text-slate-100">
+                        <span className="inline-flex min-w-9 justify-center rounded-md border border-slate-200 bg-slate-100/80 px-2.5 py-1 text-slate-800 dark:border-slate-800 dark:bg-[#0b1d30] dark:text-slate-200">
+                          {entry.metrics.firstPlaceCount}
+                        </span>
                       </td>
 
-                      <td className="px-5 py-4">
+                      <td className="px-5 py-5 font-bold text-slate-800 dark:text-slate-100">
+                        <span className="inline-flex min-w-9 justify-center rounded-md border border-slate-200 bg-slate-100/80 px-2.5 py-1 text-slate-800 dark:border-slate-800 dark:bg-[#0b1d30] dark:text-slate-200">
+                          {entry.metrics.lastPlaceCount}
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-5 font-bold text-slate-900 dark:text-white">
                         {Number(entry.metrics.kdr).toFixed(2)}
                       </td>
                     </tr>
@@ -575,14 +586,14 @@ export function LeaderboardsPage() {
 
       {query.data?.pagination?.totalPages > 1 ? (
         <nav
-          className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 sm:justify-center sm:gap-4 dark:border-slate-800 dark:bg-slate-900"
+          className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 sm:justify-center sm:gap-4 dark:border-slate-700 dark:bg-slate-900"
           aria-label="Leaderboard pagination"
         >
           <button
             type="button"
             disabled={!query.data.pagination.hasPreviousPage || query.isFetching}
             onClick={() => setPage((value) => Math.max(1, value - 1))}
-            className="min-h-11 rounded-xl border border-slate-300 px-3 py-2 text-sm font-black disabled:cursor-not-allowed disabled:opacity-40 sm:px-4 dark:border-slate-700"
+            className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-black text-slate-700 transition-colors hover:border-cyan-400 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-40 sm:px-4 dark:border-slate-800 dark:bg-[#050b16] dark:text-slate-200 dark:hover:border-cyan-500 dark:hover:text-cyan-300"
           >
             Previous
           </button>
@@ -595,7 +606,7 @@ export function LeaderboardsPage() {
             type="button"
             disabled={!query.data.pagination.hasNextPage || query.isFetching}
             onClick={() => setPage((value) => value + 1)}
-            className="min-h-11 rounded-xl border border-slate-300 px-3 py-2 text-sm font-black disabled:cursor-not-allowed disabled:opacity-40 sm:px-4 dark:border-slate-700"
+            className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-black text-slate-700 transition-colors hover:border-cyan-400 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-40 sm:px-4 dark:border-slate-800 dark:bg-[#050b16] dark:text-slate-200 dark:hover:border-cyan-500 dark:hover:text-cyan-300"
           >
             Next
           </button>
