@@ -253,7 +253,9 @@ function MobileLeaderboardCard({ entry, metric }) {
             Kills
           </p>
 
-          <p className="mt-1 font-black text-emerald-700 dark:text-emerald-400">{entry.metrics.totalKills}</p>
+          <p className="mt-1 font-black text-emerald-700 dark:text-emerald-400">
+            {entry.metrics.totalKills}
+          </p>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-[#050b16]">
@@ -261,7 +263,9 @@ function MobileLeaderboardCard({ entry, metric }) {
             Deaths
           </p>
 
-          <p className="mt-1 font-black text-red-700 dark:text-red-400">{entry.metrics.totalDeaths}</p>
+          <p className="mt-1 font-black text-red-700 dark:text-red-400">
+            {entry.metrics.totalDeaths}
+          </p>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-[#050b16]">
@@ -285,7 +289,9 @@ function MobileLeaderboardCard({ entry, metric }) {
             KDR
           </p>
 
-          <p className="mt-1 font-black text-slate-900 dark:text-white">{Number(entry.metrics.kdr).toFixed(2)}</p>
+          <p className="mt-1 font-black text-slate-900 dark:text-white">
+            {Number(entry.metrics.kdr).toFixed(2)}
+          </p>
         </div>
       </div>
     </article>
@@ -334,7 +340,6 @@ export function LeaderboardsPage() {
   const leagueDayStartLabel = formatStartHour(leagueDayStartHour);
 
   const dateDisabled = periodType === "all_time";
-
 
   function handlePeriodChange(event) {
     const nextPeriodType = event.target.value;
