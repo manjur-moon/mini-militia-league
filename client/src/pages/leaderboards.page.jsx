@@ -484,7 +484,7 @@ export function LeaderboardsPage() {
                   <tr>
                     <th className="px-5 py-3">Rank</th>
                     <th className="px-5 py-3">Player</th>
-                    <th className="px-5 py-3">Value</th>
+                    <th className="px-5 py-3">Points</th>
                     <th className="px-5 py-3">Matches</th>
                     <th className="px-5 py-3">Kills</th>
                     <th className="px-5 py-3">Deaths</th>

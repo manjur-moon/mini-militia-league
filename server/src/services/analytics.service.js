@@ -67,6 +67,9 @@ const BASE_METRIC_KEYS = [
   "mvpCount",
 ];
 
+const FIRST_PLACE_POINTS = 1;
+const LAST_PLACE_PENALTY_POINTS = 1;
+
 function hash(value) {
   return crypto.createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
@@ -107,6 +110,87 @@ function serializePlayer(player) {
 
 function baseMetrics(metrics) {
   return Object.fromEntries(BASE_METRIC_KEYS.map((key) => [key, metrics[key] ?? 0]));
+}
+
+function metricNumber(value) {
+  const parsedValue = Number(value);
+
+  return Number.isFinite(parsedValue) ? parsedValue : 0;
+}
+
+function calculateFirstPlaceLeaderboardScore(metrics) {
+  const firstPlaceCount = metricNumber(metrics?.firstPlaceCount);
+
+  const lastPlaceCount = metricNumber(metrics?.lastPlaceCount);
+
+  return (
+    firstPlaceCount * FIRST_PLACE_POINTS - lastPlaceCount * LAST_PLACE_PENALTY_POINTS
+  );
+}
+
+function sortFirstPlaceLeaderboardEntries(entries) {
+  return [...entries]
+    .map((entry) => ({
+      ...entry,
+
+      leaderboardValue: calculateFirstPlaceLeaderboardScore(entry.metrics),
+    }))
+    .sort((left, right) => {
+      if (right.leaderboardValue !== left.leaderboardValue) {
+        return right.leaderboardValue - left.leaderboardValue;
+      }
+
+      const leftLastPlaces = metricNumber(left.metrics?.lastPlaceCount);
+
+      const rightLastPlaces = metricNumber(right.metrics?.lastPlaceCount);
+
+      if (leftLastPlaces !== rightLastPlaces) {
+        return leftLastPlaces - rightLastPlaces;
+      }
+
+      const leftFirstPlaces = metricNumber(left.metrics?.firstPlaceCount);
+
+      const rightFirstPlaces = metricNumber(right.metrics?.firstPlaceCount);
+
+      if (leftFirstPlaces !== rightFirstPlaces) {
+        return rightFirstPlaces - leftFirstPlaces;
+      }
+
+      const leftKdr = metricNumber(left.metrics?.kdr);
+
+      const rightKdr = metricNumber(right.metrics?.kdr);
+
+      if (leftKdr !== rightKdr) {
+        return rightKdr - leftKdr;
+      }
+
+      const leftKills = metricNumber(left.metrics?.totalKills);
+
+      const rightKills = metricNumber(right.metrics?.totalKills);
+
+      if (leftKills !== rightKills) {
+        return rightKills - leftKills;
+      }
+
+      const leftDeaths = metricNumber(left.metrics?.totalDeaths);
+
+      const rightDeaths = metricNumber(right.metrics?.totalDeaths);
+
+      if (leftDeaths !== rightDeaths) {
+        return leftDeaths - rightDeaths;
+      }
+
+      if (right.performanceScore !== left.performanceScore) {
+        return right.performanceScore - left.performanceScore;
+      }
+
+      return String(left.playerId).localeCompare(String(right.playerId));
+    })
+    .map((entry, index) => ({
+      ...entry,
+
+      leaderboardRank: index + 1,
+    }));
 }
 
 function minimumMatchesForMetric(metric, defaultMinimum, periodType) {
@@ -635,7 +719,10 @@ export function createAnalyticsService({
     const eligible = result.entries.filter(
       (entry) => entry.metrics.matchesPlayed >= minimumMatches,
     );
-    const ranked = sortLeaderboardEntries(eligible, metric);
+    const ranked =
+      metric === "first_places"
+        ? sortFirstPlaceLeaderboardEntries(eligible)
+        : sortLeaderboardEntries(eligible, metric);
     const snapshotEntries = ranked.map((entry) => ({
       rank: entry.leaderboardRank,
       playerId: new mongoose.Types.ObjectId(entry.playerId),
