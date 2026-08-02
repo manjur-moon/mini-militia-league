@@ -5,8 +5,22 @@ import {
 } from "./statistics.service.js";
 import { formatLeagueDateKey } from "./period.service.js";
 
-export const ANALYTICS_CALCULATION_VERSION = "analytics-v3";
+export const ANALYTICS_CALCULATION_VERSION = "analytics-v4";
 export const DEFAULT_DECIMAL_PRECISION = 6;
+
+/*
+ * Overall leaderboard points:
+ *
+ * First place: +100 points
+ * Last place:  -100 points
+ *
+ * Kills provide a bounded secondary score below 90 points.
+ * Therefore, one additional net first place always remains
+ * more valuable than any possible kill advantage.
+ */
+const OVERALL_FIRST_PLACE_POINTS = 100;
+const OVERALL_LAST_PLACE_PENALTY = 100;
+const OVERALL_KILL_TIE_BREAK_CAP = 90;
 
 export function roundAnalytics(value, precision = DEFAULT_DECIMAL_PRECISION) {
   if (!Number.isFinite(value)) return 0;
@@ -24,19 +38,40 @@ export function placementBonus(placement, weights) {
   return 0;
 }
 
-function getLastPlacePenaltyWeight(weights) {
-  /*
-   * If the MVP configuration contains a dedicated lastPlacePenalty,
-   * use it. Otherwise, one last place cancels one first-place bonus.
-   */
-  return weights.lastPlacePenalty ?? weights.firstPlaceBonus;
+function toMetricNumber(value) {
+  const parsedValue = Number(value);
+
+  return Number.isFinite(parsedValue) ? parsedValue : 0;
 }
 
 function calculateFirstPlaceMetricValue(metrics) {
-  const firstPlaceCount = Number(metrics.firstPlaceCount ?? 0);
-  const lastPlaceCount = Number(metrics.lastPlaceCount ?? 0);
+  const firstPlaceCount = toMetricNumber(metrics?.firstPlaceCount);
+  const lastPlaceCount = toMetricNumber(metrics?.lastPlaceCount);
 
   return firstPlaceCount - lastPlaceCount;
+}
+
+function calculateKillTieBreakPoints(totalKills) {
+  const kills = Math.max(0, toMetricNumber(totalKills));
+
+  if (kills === 0) {
+    return 0;
+  }
+
+  return roundAnalytics(OVERALL_KILL_TIE_BREAK_CAP * (kills / (kills + 100)));
+}
+
+function calculateOverallLeaderboardPoints(metrics) {
+  const firstPlaceCount = toMetricNumber(metrics?.firstPlaceCount);
+  const lastPlaceCount = toMetricNumber(metrics?.lastPlaceCount);
+
+  const firstPlacePoints = firstPlaceCount * OVERALL_FIRST_PLACE_POINTS;
+
+  const lastPlacePenalty = lastPlaceCount * OVERALL_LAST_PLACE_PENALTY;
+
+  const killTieBreakPoints = calculateKillTieBreakPoints(metrics?.totalKills);
+
+  return roundAnalytics(firstPlacePoints - lastPlacePenalty + killTieBreakPoints);
 }
 
 export function calculateMvpScoreBreakdown(metrics, config) {
@@ -52,12 +87,6 @@ export function calculateMvpScoreBreakdown(metrics, config) {
       (metrics.thirdPlaceCount ?? 0) * weights.thirdPlaceBonus,
   );
 
-  const lastPlacePenaltyWeight = getLastPlacePenaltyWeight(weights);
-
-  const lastPlacePenalty = roundAnalytics(
-    (metrics.lastPlaceCount ?? 0) * lastPlacePenaltyWeight,
-  );
-
   const kdrBonus = roundAnalytics(
     Math.min(metrics.kdr * weights.kdrBonusWeight, weights.maximumKdrBonus),
   );
@@ -70,19 +99,13 @@ export function calculateMvpScoreBreakdown(metrics, config) {
   );
 
   const totalScore = roundAnalytics(
-    killScore -
-      deathPenalty +
-      placementScore -
-      lastPlacePenalty +
-      kdrBonus +
-      activityAdjustment,
+    killScore - deathPenalty + placementScore + kdrBonus + activityAdjustment,
   );
 
   return {
     killScore,
     deathPenalty,
     placementBonus: placementScore,
-    lastPlacePenalty,
     kdrBonus,
     activityAdjustment,
     totalScore,
@@ -95,7 +118,6 @@ export function calculateMvpScoreBreakdown(metrics, config) {
       firstPlaceCount: metrics.firstPlaceCount,
       secondPlaceCount: metrics.secondPlaceCount ?? 0,
       thirdPlaceCount: metrics.thirdPlaceCount ?? 0,
-      lastPlaceCount: metrics.lastPlaceCount ?? 0,
     },
   };
 }
@@ -105,15 +127,10 @@ export function calculateMatchPerformanceScore(row, config) {
 
   const kdr = calculateKdr(row.kills, row.deaths);
 
-  const lastPlacePenalty = isLastPlaceResult(row)
-    ? getLastPlacePenaltyWeight(weights)
-    : 0;
-
   return roundAnalytics(
     row.kills * weights.killWeight -
       row.deaths * weights.deathPenalty +
-      placementBonus(row.placement, weights) -
-      lastPlacePenalty +
+      placementBonus(row.placement, weights) +
       Math.min(kdr * weights.kdrBonusWeight, weights.maximumKdrBonus),
   );
 }
@@ -229,10 +246,6 @@ export function rankPeriodicEntries(entries) {
         return right.metrics.firstPlaceCount - left.metrics.firstPlaceCount;
       }
 
-      if (left.metrics.lastPlaceCount !== right.metrics.lastPlaceCount) {
-        return left.metrics.lastPlaceCount - right.metrics.lastPlaceCount;
-      }
-
       return String(left.playerId).localeCompare(String(right.playerId));
     })
     .map((entry, index) => ({
@@ -252,7 +265,7 @@ export function sortLeaderboardEntries(entries, metric) {
     activity: (entry) => entry.metrics.matchesPlayed,
 
     /*
-     * First-place leaderboard value:
+     * First-place metric:
      * +1 for every first place
      * -1 for every last place
      */
@@ -264,7 +277,14 @@ export function sortLeaderboardEntries(entries, metric) {
 
     average_rank: (entry) => entry.metrics.averageRank,
 
-    overall: (entry) => entry.performanceScore,
+    /*
+     * Overall leaderboard:
+     * first and last places determine the main points.
+     * Kills only provide a bounded secondary contribution.
+     *
+     * This does not replace or modify the existing MVP formula.
+     */
+    overall: (entry) => calculateOverallLeaderboardPoints(entry.metrics),
   };
 
   const selector = selectors[metric];
@@ -280,17 +300,11 @@ export function sortLeaderboardEntries(entries, metric) {
       }
 
       /*
-       * When adjusted first-place scores are equal,
-       * fewer last places wins the tie.
-       *
-       * Example:
-       * 5 first, 0 last => 5
-       * 7 first, 2 last => 5
-       *
-       * The first player ranks higher.
+       * Equal overall or first-place points:
+       * fewer last places ranks higher.
        */
       if (
-        metric === "first_places" &&
+        ["overall", "first_places"].includes(metric) &&
         left.metrics.lastPlaceCount !== right.metrics.lastPlaceCount
       ) {
         return left.metrics.lastPlaceCount - right.metrics.lastPlaceCount;
@@ -306,6 +320,10 @@ export function sortLeaderboardEntries(entries, metric) {
 
       if (left.metrics.totalDeaths !== right.metrics.totalDeaths) {
         return left.metrics.totalDeaths - right.metrics.totalDeaths;
+      }
+
+      if (right.metrics.kdr !== left.metrics.kdr) {
+        return right.metrics.kdr - left.metrics.kdr;
       }
 
       return String(left.playerId).localeCompare(String(right.playerId));
