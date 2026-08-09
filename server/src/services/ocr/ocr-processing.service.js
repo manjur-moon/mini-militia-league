@@ -282,9 +282,7 @@ export function createOCRProcessingService({
             ? ["low_ocr_confidence"]
             : []),
           ...(matches[index].status === "none" ? ["player_not_matched"] : []),
-          ...(matches[index].status === "ambiguous"
-            ? ["player_match_ambiguous"]
-            : []),
+          ...(matches[index].status === "ambiguous" ? ["player_match_ambiguous"] : []),
           ...(Number.isFinite(row.scoreDifference) &&
           row.scoreDifference !== row.kills - row.deaths
             ? ["score_difference_mismatch"]
@@ -394,9 +392,7 @@ export function createOCRProcessingService({
           $set: {
             status: "failed",
             completedAt: failedAt,
-            nextRetryAt: retryable
-              ? new Date(failedAt.getTime() + 60_000)
-              : null,
+            nextRetryAt: retryable ? new Date(failedAt.getTime() + 60_000) : null,
             lock: {
               token: null,
               lockedAt: null,
