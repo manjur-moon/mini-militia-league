@@ -3,6 +3,15 @@ import { GoogleGenAI } from "@google/genai";
 import { env } from "../../../config/env.js";
 import { OCRProviderError } from "../ocr-provider.error.js";
 
+const ALLOWED_IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/bmp",
+  "image/tiff",
+]);
+
 const extractionSchema = {
   type: "object",
   properties: {
@@ -70,7 +79,8 @@ function validateExtraction(value) {
   }
 
   const rows = value.rows.map((row, index) => {
-    const playerName = typeof row?.playerName === "string" ? row.playerName.trim() : "";
+    const playerName =
+      typeof row?.playerName === "string" ? row.playerName.trim() : "";
 
     if (!playerName) {
       throw new OCRProviderError(`Gemini row ${index + 1} has no player name.`, {
@@ -127,7 +137,10 @@ function createRawText(rows) {
 
 function getErrorStatus(error) {
   const possibleStatus =
-    error?.status ?? error?.statusCode ?? error?.httpMeta?.response?.status ?? null;
+    error?.status ??
+    error?.statusCode ??
+    error?.httpMeta?.response?.status ??
+    null;
 
   const status = Number(possibleStatus);
 
@@ -152,11 +165,15 @@ function normalizeGeminiError(error) {
     status === 408 ||
     status === 429 ||
     (status !== null && status >= 500) ||
-    /timeout|network|fetch|temporarily unavailable/i.test(message);
+    /timeout|network|fetch|temporarily unavailable|resource exhausted/i.test(
+      message,
+    );
 
   let code = "GEMINI_OCR_FAILED";
 
-  if (status === 401 || status === 403) {
+  if (status === 400) {
+    code = "GEMINI_REQUEST_INVALID";
+  } else if (status === 401 || status === 403) {
     code = "GEMINI_AUTHENTICATION_FAILED";
   } else if (status === 404) {
     code = "GEMINI_MODEL_NOT_AVAILABLE";
@@ -166,11 +183,14 @@ function normalizeGeminiError(error) {
     code = "GEMINI_REQUEST_TIMEOUT";
   }
 
-  return new OCRProviderError("Gemini was unable to process the screenshot.", {
-    code,
-    retryable,
-    cause: error,
-  });
+  return new OCRProviderError(
+    "Gemini was unable to process the screenshot.",
+    {
+      code,
+      retryable,
+      cause: error,
+    },
+  );
 }
 
 async function withTimeout(promise, timeoutMs) {
@@ -194,6 +214,75 @@ async function withTimeout(promise, timeoutMs) {
   }
 }
 
+async function downloadImageForGemini(imageUrl, fallbackMimeType) {
+  let response;
+
+  try {
+    response = await fetch(imageUrl, {
+      signal: AbortSignal.timeout(
+        Math.min(env.GEMINI_REQUEST_TIMEOUT_MS, 30_000),
+      ),
+      headers: {
+        Accept: "image/*",
+      },
+    });
+  } catch (error) {
+    const timedOut =
+      error?.name === "TimeoutError" || error?.name === "AbortError";
+
+    throw new OCRProviderError(
+      timedOut
+        ? "Downloading the screenshot for Gemini timed out."
+        : "Unable to download the screenshot for Gemini.",
+      {
+        code: timedOut
+          ? "GEMINI_SOURCE_DOWNLOAD_TIMEOUT"
+          : "GEMINI_SOURCE_DOWNLOAD_FAILED",
+        retryable: true,
+        cause: error,
+      },
+    );
+  }
+
+  if (!response.ok) {
+    throw new OCRProviderError(
+      `Unable to download the screenshot for Gemini. HTTP ${response.status}.`,
+      {
+        code: "GEMINI_SOURCE_DOWNLOAD_FAILED",
+        retryable: response.status === 429 || response.status >= 500,
+      },
+    );
+  }
+
+  const responseMimeType =
+    response.headers.get("content-type")?.split(";")[0]?.trim() ||
+    fallbackMimeType;
+
+  if (!ALLOWED_IMAGE_MIME_TYPES.has(responseMimeType)) {
+    throw new OCRProviderError(
+      "The stored screenshot is not a supported image type.",
+      {
+        code: "GEMINI_SOURCE_IMAGE_INVALID",
+        retryable: false,
+      },
+    );
+  }
+
+  const bytes = Buffer.from(await response.arrayBuffer());
+
+  if (!bytes.length) {
+    throw new OCRProviderError("The stored screenshot is empty.", {
+      code: "GEMINI_SOURCE_IMAGE_EMPTY",
+      retryable: false,
+    });
+  }
+
+  return {
+    data: bytes.toString("base64"),
+    mimeType: responseMimeType,
+  };
+}
+
 export const geminiProvider = Object.freeze({
   name: "gemini",
   version: env.GEMINI_MODEL,
@@ -201,11 +290,19 @@ export const geminiProvider = Object.freeze({
   async recognize({ imageUrl, mimeType = "image/jpeg" }) {
     try {
       if (!imageUrl) {
-        throw new OCRProviderError("Gemini OCR requires an image URL.", {
-          code: "GEMINI_IMAGE_URL_REQUIRED",
-          retryable: false,
-        });
+        throw new OCRProviderError(
+          "Gemini OCR requires an image URL.",
+          {
+            code: "GEMINI_IMAGE_URL_REQUIRED",
+            retryable: false,
+          },
+        );
       }
+
+      const sourceImage = await downloadImageForGemini(
+        imageUrl,
+        mimeType,
+      );
 
       const prompt = `
 Analyze this Mini Militia final-score screenshot.
@@ -240,13 +337,10 @@ Example:
             },
             {
               type: "image",
-              uri: imageUrl,
-              mime_type: mimeType,
+              data: sourceImage.data,
+              mime_type: sourceImage.mimeType,
             },
           ],
-          generation_config: {
-            temperature: 0,
-          },
           response_format: {
             type: "text",
             mime_type: "application/json",
@@ -257,10 +351,13 @@ Example:
       );
 
       if (!interaction.output_text) {
-        throw new OCRProviderError("Gemini returned an empty response.", {
-          code: "GEMINI_RESPONSE_EMPTY",
-          retryable: true,
-        });
+        throw new OCRProviderError(
+          "Gemini returned an empty response.",
+          {
+            code: "GEMINI_RESPONSE_EMPTY",
+            retryable: true,
+          },
+        );
       }
 
       let parsedResponse;
@@ -268,21 +365,29 @@ Example:
       try {
         parsedResponse = JSON.parse(interaction.output_text);
       } catch (error) {
-        throw new OCRProviderError("Gemini returned malformed JSON.", {
-          code: "GEMINI_JSON_INVALID",
-          retryable: true,
-          cause: error,
-        });
+        throw new OCRProviderError(
+          "Gemini returned malformed JSON.",
+          {
+            code: "GEMINI_JSON_INVALID",
+            retryable: true,
+            cause: error,
+          },
+        );
       }
 
       const extraction = validateExtraction(parsedResponse);
 
-      const averageConfidence = extraction.warnings.length ? 0.65 : 0.9;
+      const averageConfidence = extraction.warnings.length
+        ? 0.65
+        : 0.9;
 
       return {
         providerJobId: interaction.id ?? null,
+
         rawText: createRawText(extraction.rows),
+
         averageConfidence,
+
         rawResponse: {
           model: env.GEMINI_MODEL,
           rows: extraction.rows,

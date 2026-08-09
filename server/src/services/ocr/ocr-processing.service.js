@@ -15,9 +15,25 @@ import { playerMatcher } from "./player-matcher.service.js";
 const LOCK_DURATION_MS = 60_000;
 
 function failureRecord(error) {
+  const providerFailureSummary = Array.isArray(error.providerFailures)
+    ? error.providerFailures
+        .map(
+          (failure) =>
+            `${failure.provider}: ${failure.code}${
+              failure.message ? ` (${failure.message})` : ""
+            }`,
+        )
+        .join(" | ")
+    : "";
+
+  const baseMessage = error.message ?? "OCR processing failed.";
+  const message = providerFailureSummary
+    ? `${baseMessage} ${providerFailureSummary}`
+    : baseMessage;
+
   return {
     code: error.code ?? "OCR_PROCESSING_ERROR",
-    message: error.message ?? "OCR processing failed.",
+    message: message.slice(0, 1000),
     occurredAt: new Date(),
     retryable: Boolean(error.retryable),
   };
@@ -266,7 +282,9 @@ export function createOCRProcessingService({
             ? ["low_ocr_confidence"]
             : []),
           ...(matches[index].status === "none" ? ["player_not_matched"] : []),
-          ...(matches[index].status === "ambiguous" ? ["player_match_ambiguous"] : []),
+          ...(matches[index].status === "ambiguous"
+            ? ["player_match_ambiguous"]
+            : []),
           ...(Number.isFinite(row.scoreDifference) &&
           row.scoreDifference !== row.kills - row.deaths
             ? ["score_difference_mismatch"]
@@ -376,7 +394,9 @@ export function createOCRProcessingService({
           $set: {
             status: "failed",
             completedAt: failedAt,
-            nextRetryAt: retryable ? new Date(failedAt.getTime() + 60_000) : null,
+            nextRetryAt: retryable
+              ? new Date(failedAt.getTime() + 60_000)
+              : null,
             lock: {
               token: null,
               lockedAt: null,
@@ -426,6 +446,7 @@ export function createOCRProcessingService({
           jobId: String(jobId),
           code: error.code,
           message: error.message,
+          providerFailures: error.providerFailures ?? null,
         });
       });
     });
