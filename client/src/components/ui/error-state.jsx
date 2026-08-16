@@ -11,7 +11,9 @@ export function ErrorState({ title = "Unable to load data", description, onRetry
         size={32}
         aria-hidden="true"
       />
-      <h2 className="mt-4 text-lg font-semibold text-[#201F1E] dark:text-white">{title}</h2>
+      <h2 className="mt-4 text-lg font-semibold text-[#201F1E] dark:text-white">
+        {title}
+      </h2>
       {description ? (
         <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#A4262C]/90 dark:text-red-300/80">
           {description}

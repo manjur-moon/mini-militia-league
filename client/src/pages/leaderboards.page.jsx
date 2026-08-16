@@ -1,10 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  Activity,
-  CalendarDays,
-  Eye,
-  EyeOff,
-} from "lucide-react";
+import { Activity, CalendarDays, Eye, EyeOff } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -116,8 +111,7 @@ function formatStartHour(hour) {
 }
 
 function RankIcon({ rank }) {
-  const emoji =
-    rank === 1 ? "👑" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : "🏆";
+  const emoji = rank === 1 ? "👑" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : "🏆";
 
   return (
     <span className="text-base leading-none" aria-hidden="true">
