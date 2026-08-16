@@ -313,7 +313,9 @@ function MobileLeaderboardCard({ entry, metric }) {
             Matches
           </p>
 
-          <p className={`mt-1 font-semibold ${isFirst ? "text-[#5c4600] dark:text-amber-100" : ""}`}>
+          <p
+            className={`mt-1 font-semibold ${isFirst ? "text-[#5c4600] dark:text-amber-100" : ""}`}
+          >
             {entry.metrics.matchesPlayed}
           </p>
         </div>
@@ -367,7 +369,9 @@ function MobileLeaderboardCard({ entry, metric }) {
             First Place
           </p>
 
-          <p className={`mt-1 font-semibold ${isFirst ? "text-[#5c4600] dark:text-amber-100" : ""}`}>
+          <p
+            className={`mt-1 font-semibold ${isFirst ? "text-[#5c4600] dark:text-amber-100" : ""}`}
+          >
             {entry.metrics.firstPlaceCount}
           </p>
         </div>
@@ -385,7 +389,9 @@ function MobileLeaderboardCard({ entry, metric }) {
             Last Place
           </p>
 
-          <p className={`mt-1 font-semibold ${isFirst ? "text-[#5c4600] dark:text-amber-100" : ""}`}>
+          <p
+            className={`mt-1 font-semibold ${isFirst ? "text-[#5c4600] dark:text-amber-100" : ""}`}
+          >
             {entry.metrics.lastPlaceCount}
           </p>
         </div>
@@ -623,7 +629,14 @@ export function LeaderboardsPage() {
                                 : "bg-gray-50/70 hover:bg-gray-100/80 dark:bg-gray-950/45 dark:hover:bg-gray-800/80"
                             }`
                       }`}
-                      style={entry.rank === 1 ? { transition: "background-position 0.6s ease, background-color 0.2s ease" } : undefined}
+                      style={
+                        entry.rank === 1
+                          ? {
+                              transition:
+                                "background-position 0.6s ease, background-color 0.2s ease",
+                            }
+                          : undefined
+                      }
                     >
                       <td className="px-5 py-5 text-gray-700 dark:text-gray-200">
                         <span
@@ -711,7 +724,9 @@ export function LeaderboardsPage() {
 
                       <td
                         className={`px-5 py-5 font-bold ${
-                          entry.rank === 1 ? "text-[#7a5d00] dark:text-amber-200" : "text-gray-800 dark:text-gray-100"
+                          entry.rank === 1
+                            ? "text-[#7a5d00] dark:text-amber-200"
+                            : "text-gray-800 dark:text-gray-100"
                         }`}
                       >
                         <span
@@ -727,7 +742,9 @@ export function LeaderboardsPage() {
 
                       <td
                         className={`px-5 py-5 font-bold ${
-                          entry.rank === 1 ? "text-[#7a5d00] dark:text-amber-200" : "text-gray-800 dark:text-gray-100"
+                          entry.rank === 1
+                            ? "text-[#7a5d00] dark:text-amber-200"
+                            : "text-gray-800 dark:text-gray-100"
                         }`}
                       >
                         <span
@@ -743,7 +760,9 @@ export function LeaderboardsPage() {
 
                       <td
                         className={`px-5 py-5 font-bold ${
-                          entry.rank === 1 ? "text-[#7a5d00] dark:text-amber-200" : "text-gray-900 dark:text-white"
+                          entry.rank === 1
+                            ? "text-[#7a5d00] dark:text-amber-200"
+                            : "text-gray-900 dark:text-white"
                         }`}
                       >
                         {Number(entry.metrics.kdr).toFixed(2)}
