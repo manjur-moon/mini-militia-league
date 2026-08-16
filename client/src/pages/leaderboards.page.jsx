@@ -113,6 +113,17 @@ function formatStartHour(hour) {
 function RankIcon({ rank }) {
   const emoji = rank === 1 ? "👑" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : "🏆";
 
+  if (rank === 1) {
+    return (
+      <span
+        className="text-lg leading-none drop-shadow-[0_1px_3px_rgba(180,131,0,0.6)]"
+        aria-hidden="true"
+      >
+        {emoji}
+      </span>
+    );
+  }
+
   return (
     <span className="text-base leading-none" aria-hidden="true">
       {emoji}
@@ -196,31 +207,82 @@ function DailyLeaderboardInfo({ startHourLabel, isVisible, onToggle }) {
 }
 
 function MobileLeaderboardCard({ entry, metric }) {
+  const isFirst = entry.rank === 1;
+
   return (
-    <article className="rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:border-blue-300 dark:border-gray-800 dark:bg-[#252423] dark:hover:border-blue-500/50">
+    <article
+      className={
+        isFirst
+          ? "relative overflow-hidden rounded-lg border border-[#d4af37]/60 bg-gradient-to-br from-[#fff6dd] via-[#ffe8a8] to-[#fdd85d] p-4 shadow-[0_4px_18px_-6px_rgba(212,175,55,0.6)] transition-colors dark:border-amber-500/40 dark:from-[#3a2f0f] dark:via-[#5c4a15] dark:to-[#4a3a10]"
+          : "rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:border-blue-300 dark:border-gray-800 dark:bg-[#252423] dark:hover:border-blue-500/50"
+      }
+    >
       <div className="flex items-start justify-between gap-3">
         <Link
           to={`/players/${entry.player.playerId}`}
-          className="flex min-w-0 items-center gap-3 rounded-md outline-none transition hover:text-amber-600 focus-visible:ring-2 focus-visible:ring-amber-500"
+          className={`flex min-w-0 items-center gap-3 rounded-md outline-none transition focus-visible:ring-2 focus-visible:ring-amber-500 ${
+            isFirst ? "hover:text-[#8a6a00]" : "hover:text-amber-600"
+          }`}
         >
-          <PlayerAvatar player={entry.player} />
+          {isFirst ? (
+            <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-md border-2 border-[#d4af37] bg-gray-100 font-semibold shadow-[0_0_10px_-2px_rgba(212,175,55,0.8)] dark:bg-[#292929]">
+              {entry.player.photoUrl ? (
+                <img
+                  src={entry.player.photoUrl}
+                  alt={`${entry.player.name} profile`}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                entry.player.name.slice(0, 1).toUpperCase()
+              )}
+            </span>
+          ) : (
+            <PlayerAvatar player={entry.player} />
+          )}
 
           <span className="min-w-0">
-            <span className="block truncate font-semibold">{entry.player.name}</span>
+            <span
+              className={`block truncate font-semibold ${isFirst ? "text-[#5c4600] dark:text-amber-100" : ""}`}
+            >
+              {entry.player.name}
+            </span>
 
-            <span className="mt-0.5 block text-xs font-bold text-gray-500">
+            <span
+              className={`mt-0.5 block text-xs font-bold ${
+                isFirst ? "text-[#8a6a00]/80 dark:text-amber-300/70" : "text-gray-500"
+              }`}
+            >
               {entry.player.playerId}
             </span>
           </span>
         </Link>
 
-        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-sm font-semibold dark:bg-gray-800">
+        <span
+          className={
+            isFirst
+              ? "inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#d4af37] bg-white/60 px-3 py-1.5 text-sm font-extrabold text-[#8a6a00] shadow-[0_0_8px_-2px_rgba(212,175,55,0.7)] dark:bg-black/20 dark:text-amber-200"
+              : "inline-flex shrink-0 items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-sm font-semibold dark:bg-gray-800"
+          }
+        >
           <RankIcon rank={entry.rank} />#{entry.rank}
         </span>
       </div>
 
-      <div className="mt-4 rounded-md border border-blue-200 bg-blue-50/70 p-4 dark:border-blue-500/20 dark:bg-blue-500/[0.06]">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700 dark:text-blue-300">
+      <div
+        className={
+          isFirst
+            ? "mt-4 rounded-md border border-[#d4af37]/60 bg-white/50 p-4 dark:border-amber-400/30 dark:bg-black/20"
+            : "mt-4 rounded-md border border-blue-200 bg-blue-50/70 p-4 dark:border-blue-500/20 dark:bg-blue-500/[0.06]"
+        }
+      >
+        <p
+          className={
+            isFirst
+              ? "text-xs font-semibold uppercase tracking-[0.16em] text-[#8a6a00] dark:text-amber-300"
+              : "text-xs font-semibold uppercase tracking-[0.16em] text-blue-700 dark:text-blue-300"
+          }
+        >
           Selected metric
         </p>
 
@@ -228,7 +290,9 @@ function MobileLeaderboardCard({ entry, metric }) {
           className={`mt-1 text-3xl font-semibold ${
             Number(entry.value) < 0
               ? "text-red-600 dark:text-red-400"
-              : "text-gray-950 dark:text-white"
+              : isFirst
+                ? "text-[#5c4600] dark:text-amber-100"
+                : "text-gray-950 dark:text-white"
           }`}
         >
           {formatValue(metric, entry.value)}
@@ -236,16 +300,34 @@ function MobileLeaderboardCard({ entry, metric }) {
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        <div className="rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-[#1F1F1F]">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+        <div
+          className={
+            isFirst
+              ? "rounded-md border border-[#d4af37]/50 bg-white/50 p-3 dark:border-amber-400/20 dark:bg-black/20"
+              : "rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-[#1F1F1F]"
+          }
+        >
+          <p
+            className={`text-[11px] font-semibold uppercase tracking-wide ${isFirst ? "text-[#8a6a00] dark:text-amber-300/80" : "text-gray-500"}`}
+          >
             Matches
           </p>
 
-          <p className="mt-1 font-semibold">{entry.metrics.matchesPlayed}</p>
+          <p className={`mt-1 font-semibold ${isFirst ? "text-[#5c4600] dark:text-amber-100" : ""}`}>
+            {entry.metrics.matchesPlayed}
+          </p>
         </div>
 
-        <div className="rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-[#1F1F1F]">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+        <div
+          className={
+            isFirst
+              ? "rounded-md border border-[#d4af37]/50 bg-white/50 p-3 dark:border-amber-400/20 dark:bg-black/20"
+              : "rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-[#1F1F1F]"
+          }
+        >
+          <p
+            className={`text-[11px] font-semibold uppercase tracking-wide ${isFirst ? "text-[#8a6a00] dark:text-amber-300/80" : "text-gray-500"}`}
+          >
             Kills
           </p>
 
@@ -254,8 +336,16 @@ function MobileLeaderboardCard({ entry, metric }) {
           </p>
         </div>
 
-        <div className="rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-[#1F1F1F]">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+        <div
+          className={
+            isFirst
+              ? "rounded-md border border-[#d4af37]/50 bg-white/50 p-3 dark:border-amber-400/20 dark:bg-black/20"
+              : "rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-[#1F1F1F]"
+          }
+        >
+          <p
+            className={`text-[11px] font-semibold uppercase tracking-wide ${isFirst ? "text-[#8a6a00] dark:text-amber-300/80" : "text-gray-500"}`}
+          >
             Deaths
           </p>
 
@@ -264,28 +354,58 @@ function MobileLeaderboardCard({ entry, metric }) {
           </p>
         </div>
 
-        <div className="rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-[#1F1F1F]">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+        <div
+          className={
+            isFirst
+              ? "rounded-md border border-[#d4af37]/50 bg-white/50 p-3 dark:border-amber-400/20 dark:bg-black/20"
+              : "rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-[#1F1F1F]"
+          }
+        >
+          <p
+            className={`text-[11px] font-semibold uppercase tracking-wide ${isFirst ? "text-[#8a6a00] dark:text-amber-300/80" : "text-gray-500"}`}
+          >
             First Place
           </p>
 
-          <p className="mt-1 font-semibold">{entry.metrics.firstPlaceCount}</p>
+          <p className={`mt-1 font-semibold ${isFirst ? "text-[#5c4600] dark:text-amber-100" : ""}`}>
+            {entry.metrics.firstPlaceCount}
+          </p>
         </div>
 
-        <div className="rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-[#1F1F1F]">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+        <div
+          className={
+            isFirst
+              ? "rounded-md border border-[#d4af37]/50 bg-white/50 p-3 dark:border-amber-400/20 dark:bg-black/20"
+              : "rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-[#1F1F1F]"
+          }
+        >
+          <p
+            className={`text-[11px] font-semibold uppercase tracking-wide ${isFirst ? "text-[#8a6a00] dark:text-amber-300/80" : "text-gray-500"}`}
+          >
             Last Place
           </p>
 
-          <p className="mt-1 font-semibold">{entry.metrics.lastPlaceCount}</p>
+          <p className={`mt-1 font-semibold ${isFirst ? "text-[#5c4600] dark:text-amber-100" : ""}`}>
+            {entry.metrics.lastPlaceCount}
+          </p>
         </div>
 
-        <div className="rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-[#1F1F1F]">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+        <div
+          className={
+            isFirst
+              ? "rounded-md border border-[#d4af37]/50 bg-white/50 p-3 dark:border-amber-400/20 dark:bg-black/20"
+              : "rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-[#1F1F1F]"
+          }
+        >
+          <p
+            className={`text-[11px] font-semibold uppercase tracking-wide ${isFirst ? "text-[#8a6a00] dark:text-amber-300/80" : "text-gray-500"}`}
+          >
             KDR
           </p>
 
-          <p className="mt-1 font-semibold text-gray-900 dark:text-white">
+          <p
+            className={`mt-1 font-semibold ${isFirst ? "text-[#5c4600] dark:text-amber-100" : "text-gray-900 dark:text-white"}`}
+          >
             {Number(entry.metrics.kdr).toFixed(2)}
           </p>
         </div>
@@ -494,16 +614,25 @@ export function LeaderboardsPage() {
                   {query.data.data.map((entry, index) => (
                     <tr
                       key={entry.player.id}
-                      className={`border-b border-gray-200 transition-colors last:border-b-0 dark:border-gray-800 ${
+                      className={`relative border-b transition-colors last:border-b-0 ${
                         entry.rank === 1
-                          ? "bg-amber-50 hover:bg-amber-100/70 shadow-[inset_4px_0_0_0_#C29B00] dark:bg-amber-500/10 dark:hover:bg-amber-500/15"
-                          : index % 2 === 0
-                            ? "bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800/80"
-                            : "bg-gray-50/70 hover:bg-gray-100/80 dark:bg-gray-950/45 dark:hover:bg-gray-800/80"
+                          ? "border-amber-300/60 bg-gradient-to-r from-[#fff6dd] via-[#ffe8a8] to-[#fff6dd] bg-[length:200%_100%] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.8),inset_4px_0_0_0_#d4af37,0_4px_16px_-6px_rgba(212,175,55,0.55)] hover:bg-[right_center] dark:border-amber-500/30 dark:bg-gradient-to-r dark:from-[#3a2f0f] dark:via-[#5c4a15] dark:to-[#3a2f0f] dark:shadow-[inset_4px_0_0_0_#e6c866,0_4px_16px_-6px_rgba(212,175,55,0.35)]"
+                          : `border-gray-200 dark:border-gray-800 ${
+                              index % 2 === 0
+                                ? "bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800/80"
+                                : "bg-gray-50/70 hover:bg-gray-100/80 dark:bg-gray-950/45 dark:hover:bg-gray-800/80"
+                            }`
                       }`}
+                      style={entry.rank === 1 ? { transition: "background-position 0.6s ease, background-color 0.2s ease" } : undefined}
                     >
                       <td className="px-5 py-5 text-gray-700 dark:text-gray-200">
-                        <span className="inline-flex items-center gap-2 font-semibold">
+                        <span
+                          className={
+                            entry.rank === 1
+                              ? "inline-flex items-center gap-2 text-base font-extrabold text-[#8a6a00] [text-shadow:0_1px_0_rgba(255,255,255,0.6)] dark:text-amber-300"
+                              : "inline-flex items-center gap-2 font-semibold"
+                          }
+                        >
                           <RankIcon rank={entry.rank} />#{entry.rank}
                         </span>
                       </td>
@@ -511,14 +640,39 @@ export function LeaderboardsPage() {
                       <td className="px-5 py-5 text-gray-700 dark:text-gray-200">
                         <Link
                           to={`/players/${entry.player.playerId}`}
-                          className="flex items-center gap-3 rounded-md font-semibold text-gray-900 outline-none transition hover:text-blue-600 focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-white dark:hover:text-blue-300"
+                          className={`flex items-center gap-3 rounded-md font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                            entry.rank === 1
+                              ? "text-[#5c4600] hover:text-[#8a6a00] dark:text-amber-100 dark:hover:text-amber-200"
+                              : "text-gray-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-300"
+                          }`}
                         >
-                          <PlayerAvatar player={entry.player} />
+                          {entry.rank === 1 ? (
+                            <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-md border-2 border-[#d4af37] bg-gray-100 font-semibold shadow-[0_0_10px_-2px_rgba(212,175,55,0.8)] dark:bg-[#292929]">
+                              {entry.player.photoUrl ? (
+                                <img
+                                  src={entry.player.photoUrl}
+                                  alt={`${entry.player.name} profile`}
+                                  className="h-full w-full object-cover"
+                                  loading="lazy"
+                                />
+                              ) : (
+                                entry.player.name.slice(0, 1).toUpperCase()
+                              )}
+                            </span>
+                          ) : (
+                            <PlayerAvatar player={entry.player} />
+                          )}
 
                           <span>
                             {entry.player.name}
 
-                            <small className="mt-0.5 block font-bold text-gray-500 dark:text-gray-400">
+                            <small
+                              className={`mt-0.5 block font-bold ${
+                                entry.rank === 1
+                                  ? "text-[#8a6a00]/80 dark:text-amber-300/70"
+                                  : "text-gray-500 dark:text-gray-400"
+                              }`}
+                            >
                               {entry.player.playerId}
                             </small>
                           </span>
@@ -529,14 +683,22 @@ export function LeaderboardsPage() {
                         className={`px-5 py-5 text-lg font-semibold ${
                           Number(entry.value) < 0
                             ? "text-red-600 dark:text-red-400"
-                            : "text-gray-900 dark:text-white"
+                            : entry.rank === 1
+                              ? "text-[#7a5d00] dark:text-amber-200"
+                              : "text-gray-900 dark:text-white"
                         }`}
                       >
                         {formatValue(metric, entry.value)}
                       </td>
 
                       <td className="px-5 py-5 text-gray-700 dark:text-gray-200">
-                        <span className="inline-flex min-w-9 justify-center rounded-md bg-gray-100 px-2.5 py-1 font-bold dark:bg-[#292929] dark:text-gray-200">
+                        <span
+                          className={
+                            entry.rank === 1
+                              ? "inline-flex min-w-9 justify-center rounded-md border border-[#d4af37]/50 bg-white/50 px-2.5 py-1 font-bold text-[#7a5d00] dark:bg-black/20 dark:text-amber-200"
+                              : "inline-flex min-w-9 justify-center rounded-md bg-gray-100 px-2.5 py-1 font-bold dark:bg-[#292929] dark:text-gray-200"
+                          }
+                        >
                           {entry.metrics.matchesPlayed}
                         </span>
                       </td>
@@ -547,19 +709,43 @@ export function LeaderboardsPage() {
                         {entry.metrics.totalDeaths}
                       </td>
 
-                      <td className="px-5 py-5 font-bold text-gray-800 dark:text-gray-100">
-                        <span className="inline-flex min-w-9 justify-center rounded-md border border-gray-200 bg-gray-100/80 px-2.5 py-1 text-gray-800 dark:border-gray-800 dark:bg-[#292929] dark:text-gray-200">
+                      <td
+                        className={`px-5 py-5 font-bold ${
+                          entry.rank === 1 ? "text-[#7a5d00] dark:text-amber-200" : "text-gray-800 dark:text-gray-100"
+                        }`}
+                      >
+                        <span
+                          className={
+                            entry.rank === 1
+                              ? "inline-flex min-w-9 justify-center rounded-md border border-[#d4af37]/50 bg-white/50 px-2.5 py-1 text-[#7a5d00] dark:bg-black/20 dark:text-amber-200"
+                              : "inline-flex min-w-9 justify-center rounded-md border border-gray-200 bg-gray-100/80 px-2.5 py-1 text-gray-800 dark:border-gray-800 dark:bg-[#292929] dark:text-gray-200"
+                          }
+                        >
                           {entry.metrics.firstPlaceCount}
                         </span>
                       </td>
 
-                      <td className="px-5 py-5 font-bold text-gray-800 dark:text-gray-100">
-                        <span className="inline-flex min-w-9 justify-center rounded-md border border-gray-200 bg-gray-100/80 px-2.5 py-1 text-gray-800 dark:border-gray-800 dark:bg-[#292929] dark:text-gray-200">
+                      <td
+                        className={`px-5 py-5 font-bold ${
+                          entry.rank === 1 ? "text-[#7a5d00] dark:text-amber-200" : "text-gray-800 dark:text-gray-100"
+                        }`}
+                      >
+                        <span
+                          className={
+                            entry.rank === 1
+                              ? "inline-flex min-w-9 justify-center rounded-md border border-[#d4af37]/50 bg-white/50 px-2.5 py-1 text-[#7a5d00] dark:bg-black/20 dark:text-amber-200"
+                              : "inline-flex min-w-9 justify-center rounded-md border border-gray-200 bg-gray-100/80 px-2.5 py-1 text-gray-800 dark:border-gray-800 dark:bg-[#292929] dark:text-gray-200"
+                          }
+                        >
                           {entry.metrics.lastPlaceCount}
                         </span>
                       </td>
 
-                      <td className="px-5 py-5 font-bold text-gray-900 dark:text-white">
+                      <td
+                        className={`px-5 py-5 font-bold ${
+                          entry.rank === 1 ? "text-[#7a5d00] dark:text-amber-200" : "text-gray-900 dark:text-white"
+                        }`}
+                      >
                         {Number(entry.metrics.kdr).toFixed(2)}
                       </td>
                     </tr>
