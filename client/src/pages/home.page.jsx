@@ -103,7 +103,7 @@ export function HomePage() {
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 to="/leaderboards"
-                className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-3 font-black text-slate-950 shadow-lg shadow-amber-500/20 transition hover:-translate-y-0.5 hover:bg-amber-400"
+                className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-3 font-black text-white shadow-lg shadow-amber-500/20 transition hover:-translate-y-0.5 hover:bg-amber-400"
               >
                 View leaderboards <ArrowRight size={18} aria-hidden="true" />
               </Link>
@@ -134,7 +134,7 @@ export function HomePage() {
                   </p>
                 ) : null}
               </div>
-              <span className="grid size-14 place-items-center overflow-hidden rounded-2xl bg-amber-500 text-slate-950">
+              <span className="grid size-14 place-items-center overflow-hidden rounded-2xl bg-amber-500 text-white">
                 {data?.mvp?.player?.photoUrl ? (
                   <img
                     src={data.mvp.player.photoUrl}

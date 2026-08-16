@@ -70,7 +70,7 @@ export function AnalyticsPage() {
               key={value}
               type="button"
               onClick={() => setPeriodType(value)}
-              className={`rounded-xl px-4 py-2 font-black capitalize ${periodType === value ? "bg-amber-500 text-slate-950" : "border border-slate-300 dark:border-slate-700"}`}
+              className={`rounded-xl px-4 py-2 font-black capitalize ${periodType === value ? "bg-amber-500 text-white" : "border border-slate-300 dark:border-slate-700"}`}
             >
               {value}
             </button>
@@ -111,7 +111,7 @@ export function AnalyticsPage() {
           </p>
           {award ? (
             <div className="mt-5 flex items-center gap-5">
-              <div className="grid size-24 place-items-center overflow-hidden rounded-3xl bg-amber-500 text-4xl font-black text-slate-950">
+              <div className="grid size-24 place-items-center overflow-hidden rounded-3xl bg-amber-500 text-4xl font-black text-white">
                 {award.player?.photoUrl ? (
                   <img
                     src={award.player.photoUrl}

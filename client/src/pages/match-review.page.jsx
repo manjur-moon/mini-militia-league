@@ -755,7 +755,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
 
                     setReason("Admin correction required for verified match data");
                   }}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 font-black text-slate-950 transition hover:bg-amber-400"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 font-black text-white transition hover:bg-amber-400"
                 >
                   <PencilLine size={18} />
                   Propose verified correction
@@ -771,7 +771,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                       reason.trim().length < 5
                     }
                     onClick={proposeCorrection}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 font-black text-slate-950 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 font-black text-white transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <PencilLine size={18} />
                     Submit correction proposal

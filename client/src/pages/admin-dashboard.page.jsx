@@ -169,7 +169,7 @@ export function AdminDashboardPage() {
             type="button"
             disabled={recalculateMutation.isPending}
             onClick={() => recalculateMutation.mutate()}
-            className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 font-black text-slate-950 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 font-black text-white disabled:opacity-50"
           >
             <RefreshCcw size={18} />
             {recalculateMutation.isPending ? "Recalculating…" : "Rebuild statistics"}

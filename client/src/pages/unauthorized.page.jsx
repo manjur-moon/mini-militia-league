@@ -18,7 +18,7 @@ export function UnauthorizedPage() {
         </p>
         <Link
           to="/dashboard"
-          className="mt-7 inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-3 font-black text-slate-950 hover:bg-amber-400"
+          className="mt-7 inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-3 font-black text-white hover:bg-amber-400"
         >
           <ArrowLeft size={18} aria-hidden="true" />
           Return to your dashboard

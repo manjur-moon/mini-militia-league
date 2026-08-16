@@ -92,7 +92,7 @@ export function AdminHallOfFamePage() {
           <button
             type="submit"
             disabled={mutation.isPending || reason.trim().length < 5}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 font-black text-slate-950 disabled:opacity-50 md:col-span-2"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 font-black text-white disabled:opacity-50 md:col-span-2"
           >
             <RefreshCcw size={18} /> Recalculate Hall of Fame
           </button>

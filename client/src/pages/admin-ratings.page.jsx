@@ -188,7 +188,7 @@ export function AdminRatingsPage() {
                         reason: `Activate reviewed rating formula ${config.version}`,
                       })
                     }
-                    className="rounded-xl bg-amber-500 px-4 py-2 font-black text-slate-950 disabled:opacity-50"
+                    className="rounded-xl bg-amber-500 px-4 py-2 font-black text-white disabled:opacity-50"
                   >
                     Activate
                   </button>
@@ -341,7 +341,7 @@ export function AdminRatingsPage() {
           <button
             type="submit"
             disabled={createMutation.isPending || Boolean(parsedFormula.error)}
-            className="justify-self-start rounded-xl bg-amber-500 px-5 py-3 font-black text-slate-950 disabled:opacity-50"
+            className="justify-self-start rounded-xl bg-amber-500 px-5 py-3 font-black text-white disabled:opacity-50"
           >
             {createMutation.isPending ? "Creating…" : "Create rating version"}
           </button>

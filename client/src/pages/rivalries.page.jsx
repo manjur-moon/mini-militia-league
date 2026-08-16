@@ -11,7 +11,7 @@ function Fighter({ player, label }) {
       <p className="text-xs font-black uppercase tracking-wider text-slate-500">
         {label}
       </p>
-      <div className="mx-auto mt-3 grid size-20 place-items-center overflow-hidden rounded-2xl bg-amber-500 text-2xl font-black text-slate-950">
+      <div className="mx-auto mt-3 grid size-20 place-items-center overflow-hidden rounded-2xl bg-amber-500 text-2xl font-black text-white">
         {player.photoUrl ? (
           <img
             src={player.photoUrl}

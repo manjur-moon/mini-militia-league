@@ -73,7 +73,7 @@ export function MvpPage() {
             <button
               key={value}
               onClick={() => setAwardType(value)}
-              className={`rounded-xl px-4 py-2 font-black capitalize ${awardType === value ? "bg-amber-500 text-slate-950" : "border border-slate-300 dark:border-slate-700"}`}
+              className={`rounded-xl px-4 py-2 font-black capitalize ${awardType === value ? "bg-amber-500 text-white" : "border border-slate-300 dark:border-slate-700"}`}
             >
               {value.replace("_", " ")}
             </button>
@@ -83,7 +83,7 @@ export function MvpPage() {
 
       <article className="overflow-hidden rounded-[2rem] bg-slate-950 p-8 text-white">
         <div className="flex flex-col gap-7 md:flex-row md:items-center">
-          <span className="grid size-28 place-items-center overflow-hidden rounded-[2rem] bg-amber-500 text-5xl font-black text-slate-950">
+          <span className="grid size-28 place-items-center overflow-hidden rounded-[2rem] bg-amber-500 text-5xl font-black text-white">
             {award?.player?.photoUrl ? (
               <img
                 src={award.player.photoUrl}

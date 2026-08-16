@@ -9,7 +9,7 @@ export function AppLogo({ compact = false, to = "/" }) {
       className="group inline-flex min-w-0 items-center gap-3 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-500"
       aria-label={`${APP_NAME} home`}
     >
-      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20 transition group-hover:rotate-3">
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-amber-500 text-white shadow-lg shadow-amber-500/20 transition group-hover:rotate-3">
         <Crosshair size={22} strokeWidth={2.5} aria-hidden="true" />
       </span>
       {!compact ? (

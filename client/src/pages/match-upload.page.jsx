@@ -96,7 +96,7 @@ export function MatchUploadPage({ basePath = "/moderator" }) {
         <button
           type="submit"
           disabled={mutation.isPending}
-          className="justify-self-start rounded-xl bg-amber-500 px-5 py-3 font-black text-slate-950 disabled:opacity-50"
+          className="justify-self-start rounded-xl bg-amber-500 px-5 py-3 font-black text-white disabled:opacity-50"
         >
           {mutation.isPending ? "Uploading…" : "Upload and queue OCR"}
         </button>

@@ -6,7 +6,7 @@ export function AchievementBadge({ achievement, unlocked = false }) {
       <span
         className={`grid size-12 shrink-0 place-items-center rounded-2xl text-2xl ${
           unlocked
-            ? "bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20"
+            ? "bg-amber-500 text-white shadow-lg shadow-amber-500/20"
             : "bg-slate-100 text-slate-500 dark:bg-slate-800"
         }`}
         aria-hidden="true"

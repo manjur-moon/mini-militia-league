@@ -158,7 +158,7 @@ export function PlayerCardPage() {
                 )
               }
               disabled={actionState === "download"}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 font-black text-slate-950 disabled:cursor-wait disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 font-black text-white disabled:cursor-wait disabled:opacity-60"
             >
               <Download size={18} />
               {actionState === "download" ? "Rendering…" : "Download PNG"}

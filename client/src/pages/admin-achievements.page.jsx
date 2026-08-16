@@ -123,7 +123,7 @@ export function AdminAchievementsPage() {
                 "Recalculate all active achievements after verified analytics updates.",
             })
           }
-          className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-3 font-black text-slate-950 disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-3 font-black text-white disabled:opacity-50"
         >
           <RefreshCcw size={17} />
           {recalculateMutation.isPending ? "Evaluating…" : "Evaluate all achievements"}
@@ -173,7 +173,7 @@ export function AdminAchievementsPage() {
                     className={
                       achievement.isActive
                         ? "rounded-xl border px-3 py-2 text-sm font-black"
-                        : "rounded-xl bg-amber-500 px-3 py-2 text-sm font-black text-slate-950"
+                        : "rounded-xl bg-amber-500 px-3 py-2 text-sm font-black text-white"
                     }
                   >
                     {achievement.isActive ? "Deactivate" : "Activate"}

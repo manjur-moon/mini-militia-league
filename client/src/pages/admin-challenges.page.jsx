@@ -239,7 +239,7 @@ export function AdminChallengesPage() {
           <button
             type="submit"
             disabled={createMutation.isPending}
-            className="rounded-xl bg-amber-500 px-4 py-3 font-black text-slate-950 disabled:opacity-50 md:col-span-2"
+            className="rounded-xl bg-amber-500 px-4 py-3 font-black text-white disabled:opacity-50 md:col-span-2"
           >
             Create challenge
           </button>
@@ -316,7 +316,7 @@ export function AdminChallengesPage() {
                               reason: "Close the active challenge period.",
                             })
                           }
-                          className="rounded-lg bg-amber-500 px-3 py-2 text-xs font-black text-slate-950"
+                          className="rounded-lg bg-amber-500 px-3 py-2 text-xs font-black text-white"
                         >
                           Complete
                         </button>

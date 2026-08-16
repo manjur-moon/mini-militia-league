@@ -164,7 +164,7 @@ export function AdminNotificationsPage() {
             <button
               type="submit"
               disabled={createMutation.isPending}
-              className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-3 font-black text-slate-950 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-3 font-black text-white disabled:opacity-50"
             >
               <Send size={18} aria-hidden="true" />
               Send notification

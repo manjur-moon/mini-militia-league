@@ -36,7 +36,7 @@ export function AuthNavigation() {
         </Link>
         <Link
           to="/register"
-          className="rounded-lg bg-amber-500 px-3 py-2 text-sm font-black text-slate-950 hover:bg-amber-400"
+          className="rounded-lg bg-amber-500 px-3 py-2 text-sm font-black text-white hover:bg-amber-400"
         >
           Register
         </Link>

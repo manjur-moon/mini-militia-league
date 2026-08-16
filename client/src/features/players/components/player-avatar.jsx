@@ -21,7 +21,7 @@ export function PlayerAvatar({ player, size = "lg" }) {
   return (
     <div
       aria-label={`${player.name} has no profile photo`}
-      className={`${dimensions} grid shrink-0 place-items-center rounded-2xl bg-amber-500 font-black text-slate-950`}
+      className={`${dimensions} grid shrink-0 place-items-center rounded-2xl bg-amber-500 font-black text-white`}
     >
       {initials}
     </div>

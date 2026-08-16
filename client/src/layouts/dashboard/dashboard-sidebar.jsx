@@ -24,7 +24,7 @@ function NavigationItem({ item, onNavigate }) {
       end={item.end}
       onClick={onNavigate}
       className={({ isActive }) =>
-        `group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition ${isActive ? "bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/15" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"}`
+        `group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition ${isActive ? "bg-amber-500 text-white shadow-lg shadow-amber-500/15" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"}`
       }
     >
       <Icon size={19} aria-hidden="true" />

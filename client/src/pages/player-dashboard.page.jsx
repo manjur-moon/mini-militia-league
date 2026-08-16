@@ -41,7 +41,7 @@ export function PlayerDashboardPage() {
           profile?.player ? (
             <Link
               to={`/players/${profile.player.playerId}`}
-              className="rounded-xl bg-amber-500 px-4 py-2.5 font-black text-slate-950"
+              className="rounded-xl bg-amber-500 px-4 py-2.5 font-black text-white"
             >
               Public profile
             </Link>
@@ -51,7 +51,7 @@ export function PlayerDashboardPage() {
 
       {!isLinked ? (
         <section className="flex flex-col gap-4 rounded-2xl border border-amber-300 bg-amber-50 p-5 sm:flex-row sm:items-center dark:border-amber-500/30 dark:bg-amber-500/10">
-          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-amber-500 text-slate-950">
+          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-amber-500 text-white">
             <Link2 size={21} aria-hidden="true" />
           </span>
           <div>

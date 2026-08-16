@@ -257,7 +257,7 @@ export function AdminSeasonsPage() {
             <button
               type="submit"
               disabled={isSaving}
-              className="rounded-xl bg-amber-500 px-5 py-3 font-black text-slate-950 disabled:opacity-50"
+              className="rounded-xl bg-amber-500 px-5 py-3 font-black text-white disabled:opacity-50"
             >
               {editingId ? "Save season" : "Create season"}
             </button>
@@ -369,7 +369,7 @@ export function AdminSeasonsPage() {
                                 "Complete and finalize the active season.",
                               )
                             }
-                            className="rounded-lg bg-amber-500 px-3 py-2 text-xs font-black text-slate-950"
+                            className="rounded-lg bg-amber-500 px-3 py-2 text-xs font-black text-white"
                           >
                             Complete
                           </button>

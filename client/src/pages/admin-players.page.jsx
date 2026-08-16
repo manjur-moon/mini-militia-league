@@ -87,7 +87,7 @@ function PlayerForm({ player, isPending, onSubmit, onCancel }) {
         <button
           type="submit"
           disabled={isPending}
-          className="rounded-xl bg-amber-500 px-4 py-2.5 font-black text-slate-950 disabled:opacity-50"
+          className="rounded-xl bg-amber-500 px-4 py-2.5 font-black text-white disabled:opacity-50"
         >
           {player ? "Save changes" : "Create player"}
         </button>
@@ -272,7 +272,7 @@ export function AdminPlayersPage() {
           <button
             type="button"
             onClick={() => setShowCreate((value) => !value)}
-            className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 font-black text-slate-950"
+            className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 font-black text-white"
           >
             {showCreate ? <X size={18} /> : <Plus size={18} />}
             {showCreate ? "Close form" : "New player"}

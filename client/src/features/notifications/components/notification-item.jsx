@@ -44,7 +44,7 @@ export function NotificationItem({ notification, onOpen, onMarkRead, isUpdating 
           className={`grid size-11 shrink-0 place-items-center rounded-xl ${
             notification.isRead
               ? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-              : "bg-amber-400 text-slate-950"
+              : "bg-amber-400 text-white"
           }`}
         >
           <Icon size={20} aria-hidden="true" />
@@ -60,7 +60,7 @@ export function NotificationItem({ notification, onOpen, onMarkRead, isUpdating 
               </p>
             </div>
             {!notification.isRead ? (
-              <span className="rounded-full bg-amber-400 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-950">
+              <span className="rounded-full bg-amber-400 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white">
                 New
               </span>
             ) : null}

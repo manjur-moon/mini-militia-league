@@ -2,10 +2,62 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/**
+ * Microsoft Fluent-inspired theme override.
+ *
+ * The app's components use Tailwind's built-in "amber" and "cyan" color
+ * families as the brand/accent color throughout (buttons, active nav
+ * states, highlights, focus rings, badges...). Tailwind v4 generates every
+ * utility class from these theme variables, so redefining the palette here
+ * retints the ENTIRE app to Microsoft blue without editing each component.
+ *
+ * "slate" (neutral grays), "emerald" (success/kills), "red" (danger/deaths),
+ * "violet"/"sky"/"indigo"/"rose" (distinct status/category colors) are left
+ * alone on purpose — they carry real semantic meaning in the UI.
+ */
 @theme {
   --font-sans:
     "Segoe UI", "Segoe UI Variable", system-ui, -apple-system, BlinkMacSystemFont,
     ui-sans-serif, "Helvetica Neue", Arial, sans-serif;
+
+  /* Brand accent: Microsoft blue, replacing the old amber accent. */
+  --color-amber-50: #eff6fc;
+  --color-amber-100: #deecf9;
+  --color-amber-200: #c7e0f4;
+  --color-amber-300: #9dcbf2;
+  --color-amber-400: #62a9e8;
+  --color-amber-500: #0078d4;
+  --color-amber-600: #106ebe;
+  --color-amber-700: #005a9e;
+  --color-amber-800: #004578;
+  --color-amber-900: #003358;
+  --color-amber-950: #001f33;
+
+  /* Secondary accent (was cyan): same blue family for a single, unified
+     accent color across the app instead of a cyan/amber mix. */
+  --color-cyan-50: #eff6fc;
+  --color-cyan-200: #c7e0f4;
+  --color-cyan-300: #9dcbf2;
+  --color-cyan-400: #62a9e8;
+  --color-cyan-600: #106ebe;
+  --color-cyan-800: #004578;
+  --color-cyan-900: #003358;
+  --color-cyan-950: #001f33;
+
+  /* Fluent uses tighter corners than the app's original very-rounded look. */
+  --radius-xl: 0.5rem;
+  --radius-2xl: 0.625rem;
+  --radius-3xl: 0.75rem;
+
+  /* Softer weights: Fluent leans on semibold, not ultra-heavy black text. */
+  --font-weight-bold: 600;
+  --font-weight-extrabold: 600;
+  --font-weight-black: 600;
+
+  /* Flatter, quieter shadows instead of heavy drop shadows. */
+  --shadow-lg: 0 1px 3px rgb(0 0 0 / 0.08), 0 1px 2px rgb(0 0 0 / 0.06);
+  --shadow-xl: 0 4px 10px rgb(0 0 0 / 0.08), 0 2px 4px rgb(0 0 0 / 0.06);
+  --shadow-2xl: 0 8px 20px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06);
 }
 
 :root {
@@ -84,7 +136,7 @@ textarea {
 
 .auth-grid {
   background-image:
-    radial-gradient(circle at 25% 25%, rgb(245 158 11 / 0.24), transparent 28%),
+    radial-gradient(circle at 25% 25%, rgb(0 120 212 / 0.24), transparent 28%),
     linear-gradient(to right, rgb(255 255 255 / 0.05) 1px, transparent 1px),
     linear-gradient(to bottom, rgb(255 255 255 / 0.05) 1px, transparent 1px);
   background-size:
@@ -94,7 +146,7 @@ textarea {
 }
 
 ::selection {
-  background: rgb(245 158 11 / 0.35);
+  background: rgb(0 120 212 / 0.25);
 }
 
 @media (prefers-reduced-motion: reduce) {

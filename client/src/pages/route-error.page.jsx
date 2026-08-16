@@ -17,7 +17,7 @@ export function RouteErrorPage() {
         <p className="mt-4 text-slate-600 dark:text-slate-400">{message}</p>
         <Link
           to="/"
-          className="mt-7 inline-flex rounded-xl bg-amber-500 px-5 py-3 font-black text-slate-950"
+          className="mt-7 inline-flex rounded-xl bg-amber-500 px-5 py-3 font-black text-white"
         >
           Return home
         </Link>

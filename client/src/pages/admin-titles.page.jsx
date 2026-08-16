@@ -127,7 +127,7 @@ export function AdminTitlesPage() {
                 "Recalculate current dynamic-title eligibility after verified analytics updates.",
             })
           }
-          className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-3 font-black text-slate-950 disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-3 font-black text-white disabled:opacity-50"
         >
           <RefreshCcw size={17} />{" "}
           {recalculateMutation.isPending ? "Evaluating…" : "Evaluate all active titles"}
@@ -184,7 +184,7 @@ export function AdminTitlesPage() {
                           reason: `Activate reviewed definition ${title.code} ${title.version}.`,
                         })
                       }
-                      className="rounded-xl bg-amber-500 px-3 py-2 text-sm font-black text-slate-950"
+                      className="rounded-xl bg-amber-500 px-3 py-2 text-sm font-black text-white"
                     >
                       Activate
                     </button>
@@ -350,7 +350,7 @@ export function AdminTitlesPage() {
           <button
             type="submit"
             disabled={createMutation.isPending || Boolean(parsedRules.error)}
-            className="justify-self-start rounded-xl bg-amber-500 px-5 py-3 font-black text-slate-950 disabled:opacity-50"
+            className="justify-self-start rounded-xl bg-amber-500 px-5 py-3 font-black text-white disabled:opacity-50"
           >
             Create inactive definition
           </button>

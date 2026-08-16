@@ -150,7 +150,7 @@ export function PublicLayout() {
 
           <p className="text-center text-xs font-medium tracking-wide text-slate-500">
             Developed by :{" "}
-            <span className="animate-pulse font-bold text-amber-500 drop-shadow-[0_0_5px_rgba(245,158,11,0.45)] dark:text-amber-300">
+            <span className="animate-pulse font-bold text-amber-500 drop-shadow-[0_0_5px_rgba(0,120,212,0.45)] dark:text-amber-300">
               Manjurul Islam Moon
             </span>
           </p>

@@ -87,7 +87,7 @@ export function PlayerAnalyticsPanel({ playerId }) {
                 type="button"
                 key={option}
                 onClick={() => setRange(option)}
-                className={`rounded-lg px-4 py-2 text-sm font-black ${range === option ? "bg-amber-500 text-slate-950" : "text-slate-500"}`}
+                className={`rounded-lg px-4 py-2 text-sm font-black ${range === option ? "bg-amber-500 text-white" : "text-slate-500"}`}
               >
                 {option === "7d" ? "7 days" : "30 days"}
               </button>

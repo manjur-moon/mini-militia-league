@@ -86,7 +86,7 @@ export function RatingsPage() {
               key={option.value}
               type="button"
               onClick={() => setPeriodType(option.value)}
-              className={`rounded-xl px-4 py-2 text-sm font-black ${periodType === option.value ? "bg-amber-500 text-slate-950" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"}`}
+              className={`rounded-xl px-4 py-2 text-sm font-black ${periodType === option.value ? "bg-amber-500 text-white" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"}`}
             >
               {option.label}
             </button>
@@ -108,7 +108,7 @@ export function RatingsPage() {
             <PlayerAvatar player={champion.player} />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-3 py-1 text-xs font-black text-slate-950">
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-3 py-1 text-xs font-black text-white">
                   <Trophy size={14} /> Rating leader
                 </span>
                 <span className="rounded-full bg-white/70 px-3 py-1 text-xs font-black dark:bg-slate-900/70">

@@ -99,7 +99,7 @@ function UserRow({ user, onAction, isPending }) {
           type="button"
           disabled={!canSubmit || !playerId.trim()}
           onClick={() => onAction("link", { userId: user.id, playerId, reason })}
-          className="rounded-xl bg-amber-500 px-4 py-2.5 font-black text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-xl bg-amber-500 px-4 py-2.5 font-black text-white hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Link player
         </button>

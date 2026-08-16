@@ -46,7 +46,7 @@ export function AuthLayout() {
                 key={title}
                 className="flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur"
               >
-                <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-amber-500 text-slate-950">
+                <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-amber-500 text-white">
                   <Icon size={21} aria-hidden="true" />
                 </span>
                 <div>

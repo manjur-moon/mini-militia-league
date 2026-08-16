@@ -104,7 +104,7 @@ export function LoginPage() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 font-black text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 font-black text-white hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSubmitting ? <LoaderCircle className="animate-spin" size={19} /> : null}
           {isSubmitting ? "Signing in…" : "Sign in"}
