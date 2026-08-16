@@ -55,10 +55,10 @@ export function PlayerMatchHistoryPage() {
                   {new Date(item.match.matchDate).toLocaleString()}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-4 text-sm font-bold">
-                  <span className="flex items-center gap-1 text-emerald-600">
+                  <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
                     <Crosshair size={16} /> {item.kills} kills
                   </span>
-                  <span className="flex items-center gap-1 text-red-600">
+                  <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
                     <Skull size={16} /> {item.deaths} deaths
                   </span>
                   <span className="flex items-center gap-1">

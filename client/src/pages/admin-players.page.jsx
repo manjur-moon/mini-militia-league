@@ -44,7 +44,7 @@ function PlayerForm({ player, isPending, onSubmit, onCancel }) {
       <label className="text-sm font-bold">
         Player name
         <input className={inputClass} {...form.register("name")} />
-        <span className="mt-1 block text-xs text-red-600">
+        <span className="mt-1 block text-xs text-red-600 dark:text-red-400">
           {form.formState.errors.name?.message}
         </span>
       </label>
@@ -60,7 +60,7 @@ function PlayerForm({ player, isPending, onSubmit, onCancel }) {
         <label className="text-sm font-bold">
           Join date
           <input type="date" className={inputClass} {...form.register("joinDate")} />
-          <span className="mt-1 block text-xs text-red-600">
+          <span className="mt-1 block text-xs text-red-600 dark:text-red-400">
             {form.formState.errors.joinDate?.message}
           </span>
         </label>
@@ -211,7 +211,7 @@ function AdminPlayerCard({ player, mutation }) {
                   },
                 })
               }
-              className="rounded-xl border border-red-300 px-3 py-2 text-sm font-bold text-red-600 dark:border-red-900"
+              className="rounded-xl border border-red-300 px-3 py-2 text-sm font-bold text-red-600 dark:border-red-900 dark:text-red-400"
             >
               Remove photo
             </button>

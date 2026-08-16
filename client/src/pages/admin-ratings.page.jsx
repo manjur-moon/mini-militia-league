@@ -322,7 +322,7 @@ export function AdminRatingsPage() {
               spellCheck="false"
             />
             {parsedFormula.error ? (
-              <span className="text-xs font-bold text-red-600">
+              <span className="text-xs font-bold text-red-600 dark:text-red-400">
                 {parsedFormula.error}
               </span>
             ) : null}
