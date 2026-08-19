@@ -57,6 +57,25 @@ export function isLastPlaceResult(row) {
   );
 }
 
+/**
+ * Counts "hat-tricks": every 3 total first-place (or
+ * last-place) results, regardless of whether they were
+ * consecutive.
+ *
+ * 3 total first places = 1 hat-trick, 6 total = 2
+ * hat-tricks, 7 total is still 2 (the extra one doesn't
+ * complete another group of 3).
+ */
+export function calculateHatTrickCounts(rows) {
+  const firstPlaceCount = rows.filter((row) => row.placement === 1).length;
+  const lastPlaceCount = rows.filter(isLastPlaceResult).length;
+
+  return {
+    firstPlaceHatTricks: Math.floor(firstPlaceCount / 3),
+    lastPlaceHatTricks: Math.floor(lastPlaceCount / 3),
+  };
+}
+
 function matchKdr(kills, deaths) {
   return calculateKdr(kills, deaths);
 }

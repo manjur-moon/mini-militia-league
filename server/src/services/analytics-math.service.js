@@ -1,11 +1,12 @@
 import {
   calculateCoreMetrics,
+  calculateHatTrickCounts,
   calculateKdr,
   isLastPlaceResult,
 } from "./statistics.service.js";
 import { formatLeagueDateKey } from "./period.service.js";
 
-export const ANALYTICS_CALCULATION_VERSION = "analytics-v4";
+export const ANALYTICS_CALCULATION_VERSION = "analytics-v5";
 export const DEFAULT_DECIMAL_PRECISION = 6;
 
 /*
@@ -171,6 +172,7 @@ export function calculateImprovementRate(currentAverage, previousAverage) {
 
 export function enrichPeriodMetrics(rows, mvpCount = 0) {
   const metrics = calculateCoreMetrics(rows, mvpCount);
+  const hatTricks = calculateHatTrickCounts(rows);
 
   return {
     ...metrics,
@@ -178,6 +180,10 @@ export function enrichPeriodMetrics(rows, mvpCount = 0) {
     secondPlaceCount: rows.filter((row) => row.placement === 2).length,
 
     thirdPlaceCount: rows.filter((row) => row.placement === 3).length,
+
+    firstPlaceHatTricks: hatTricks.firstPlaceHatTricks,
+
+    lastPlaceHatTricks: hatTricks.lastPlaceHatTricks,
   };
 }
 

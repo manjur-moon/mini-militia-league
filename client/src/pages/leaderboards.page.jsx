@@ -208,12 +208,14 @@ function DailyLeaderboardInfo({ startHourLabel, isVisible, onToggle }) {
 
 function MobileLeaderboardCard({ entry, metric }) {
   const isFirst = entry.rank === 1;
+  const firstPlaceHatTricks = Math.floor((entry.metrics.firstPlaceCount ?? 0) / 3);
+  const lastPlaceHatTricks = Math.floor((entry.metrics.lastPlaceCount ?? 0) / 3);
 
   return (
     <article
       className={
         isFirst
-          ? "relative overflow-hidden rounded-lg border border-[#d4af37]/60 bg-gradient-to-br from-[#fff6dd] via-[#ffe8a8] to-[#fdd85d] p-4 shadow-[0_4px_18px_-6px_rgba(212,175,55,0.6)] transition-colors dark:border-amber-500/40 dark:from-[#3a2f0f] dark:via-[#5c4a15] dark:to-[#4a3a10]"
+          ? "relative overflow-hidden rounded-lg border border-[#d4af37]/60 bg-gradient-to-br from-[#fff6dd] via-[#ffe8a8] to-[#fdd85d] p-4 shadow-[0_4px_18px_-6px_rgba(212,175,55,0.6)] transition-colors dark:border-amber-500/30 dark:bg-none dark:bg-amber-500/10 dark:shadow-none"
           : "rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:border-blue-300 dark:border-gray-800 dark:bg-[#252423] dark:hover:border-blue-500/50"
       }
     >
@@ -221,11 +223,13 @@ function MobileLeaderboardCard({ entry, metric }) {
         <Link
           to={`/players/${entry.player.playerId}`}
           className={`flex min-w-0 items-center gap-3 rounded-md outline-none transition focus-visible:ring-2 focus-visible:ring-amber-500 ${
-            isFirst ? "hover:text-[#8a6a00]" : "hover:text-amber-600"
+            isFirst
+              ? "hover:text-[#8a6a00] dark:hover:text-amber-300"
+              : "hover:text-amber-600"
           }`}
         >
           {isFirst ? (
-            <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-md border-2 border-[#d4af37] bg-gray-100 font-semibold shadow-[0_0_10px_-2px_rgba(212,175,55,0.8)] dark:bg-[#292929]">
+            <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-md border-2 border-[#d4af37] bg-gray-100 font-semibold shadow-[0_0_10px_-2px_rgba(212,175,55,0.8)] dark:border-amber-400 dark:bg-[#292929] dark:shadow-none">
               {entry.player.photoUrl ? (
                 <img
                   src={entry.player.photoUrl}
@@ -243,14 +247,14 @@ function MobileLeaderboardCard({ entry, metric }) {
 
           <span className="min-w-0">
             <span
-              className={`block truncate font-semibold ${isFirst ? "text-[#5c4600] dark:text-amber-100" : ""}`}
+              className={`block truncate font-semibold ${isFirst ? "text-[#5c4600] dark:text-white" : ""}`}
             >
               {entry.player.name}
             </span>
 
             <span
               className={`mt-0.5 block text-xs font-bold ${
-                isFirst ? "text-[#8a6a00]/80 dark:text-amber-300/70" : "text-gray-500"
+                isFirst ? "text-[#8a6a00]/80 dark:text-amber-400/70" : "text-gray-500"
               }`}
             >
               {entry.player.playerId}
@@ -261,7 +265,7 @@ function MobileLeaderboardCard({ entry, metric }) {
         <span
           className={
             isFirst
-              ? "inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#d4af37] bg-white/60 px-3 py-1.5 text-sm font-extrabold text-[#8a6a00] shadow-[0_0_8px_-2px_rgba(212,175,55,0.7)] dark:bg-black/20 dark:text-amber-200"
+              ? "inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#d4af37] bg-white/60 px-3 py-1.5 text-sm font-extrabold text-[#8a6a00] shadow-[0_0_8px_-2px_rgba(212,175,55,0.7)] dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300 dark:shadow-none"
               : "inline-flex shrink-0 items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-sm font-semibold dark:bg-gray-800"
           }
         >
@@ -272,14 +276,14 @@ function MobileLeaderboardCard({ entry, metric }) {
       <div
         className={
           isFirst
-            ? "mt-4 rounded-md border border-[#d4af37]/60 bg-white/50 p-4 dark:border-amber-400/30 dark:bg-black/20"
+            ? "mt-4 rounded-md border border-[#d4af37]/60 bg-white/50 p-4 dark:border-amber-500/25 dark:bg-black/10"
             : "mt-4 rounded-md border border-blue-200 bg-blue-50/70 p-4 dark:border-blue-500/20 dark:bg-blue-500/[0.06]"
         }
       >
         <p
           className={
             isFirst
-              ? "text-xs font-semibold uppercase tracking-[0.16em] text-[#8a6a00] dark:text-amber-300"
+              ? "text-xs font-semibold uppercase tracking-[0.16em] text-[#8a6a00] dark:text-amber-400"
               : "text-xs font-semibold uppercase tracking-[0.16em] text-blue-700 dark:text-blue-300"
           }
         >
@@ -291,7 +295,7 @@ function MobileLeaderboardCard({ entry, metric }) {
             Number(entry.value) < 0
               ? "text-red-600 dark:text-red-400"
               : isFirst
-                ? "text-[#5c4600] dark:text-amber-100"
+                ? "text-[#5c4600] dark:text-white"
                 : "text-gray-950 dark:text-white"
           }`}
         >
@@ -303,18 +307,18 @@ function MobileLeaderboardCard({ entry, metric }) {
         <div
           className={
             isFirst
-              ? "rounded-md border border-[#d4af37]/50 bg-white/50 p-3 dark:border-amber-400/20 dark:bg-black/20"
+              ? "rounded-md border border-[#d4af37]/50 bg-white/50 p-3 dark:border-amber-500/20 dark:bg-black/10"
               : "rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-[#1F1F1F]"
           }
         >
           <p
-            className={`text-[11px] font-semibold uppercase tracking-wide ${isFirst ? "text-[#8a6a00] dark:text-amber-300/80" : "text-gray-500"}`}
+            className={`text-[11px] font-semibold uppercase tracking-wide ${isFirst ? "text-[#8a6a00] dark:text-amber-400/80" : "text-gray-500"}`}
           >
             Matches
           </p>
 
           <p
-            className={`mt-1 font-semibold ${isFirst ? "text-[#5c4600] dark:text-amber-100" : ""}`}
+            className={`mt-1 font-semibold ${isFirst ? "text-[#5c4600] dark:text-gray-100" : ""}`}
           >
             {entry.metrics.matchesPlayed}
           </p>
@@ -323,12 +327,12 @@ function MobileLeaderboardCard({ entry, metric }) {
         <div
           className={
             isFirst
-              ? "rounded-md border border-[#d4af37]/50 bg-white/50 p-3 dark:border-amber-400/20 dark:bg-black/20"
+              ? "rounded-md border border-[#d4af37]/50 bg-white/50 p-3 dark:border-amber-500/20 dark:bg-black/10"
               : "rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-[#1F1F1F]"
           }
         >
           <p
-            className={`text-[11px] font-semibold uppercase tracking-wide ${isFirst ? "text-[#8a6a00] dark:text-amber-300/80" : "text-gray-500"}`}
+            className={`text-[11px] font-semibold uppercase tracking-wide ${isFirst ? "text-[#8a6a00] dark:text-amber-400/80" : "text-gray-500"}`}
           >
             Kills
           </p>
@@ -341,12 +345,12 @@ function MobileLeaderboardCard({ entry, metric }) {
         <div
           className={
             isFirst
-              ? "rounded-md border border-[#d4af37]/50 bg-white/50 p-3 dark:border-amber-400/20 dark:bg-black/20"
+              ? "rounded-md border border-[#d4af37]/50 bg-white/50 p-3 dark:border-amber-500/20 dark:bg-black/10"
               : "rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-[#1F1F1F]"
           }
         >
           <p
-            className={`text-[11px] font-semibold uppercase tracking-wide ${isFirst ? "text-[#8a6a00] dark:text-amber-300/80" : "text-gray-500"}`}
+            className={`text-[11px] font-semibold uppercase tracking-wide ${isFirst ? "text-[#8a6a00] dark:text-amber-400/80" : "text-gray-500"}`}
           >
             Deaths
           </p>
@@ -359,58 +363,70 @@ function MobileLeaderboardCard({ entry, metric }) {
         <div
           className={
             isFirst
-              ? "rounded-md border border-[#d4af37]/50 bg-white/50 p-3 dark:border-amber-400/20 dark:bg-black/20"
+              ? "rounded-md border border-[#d4af37]/50 bg-white/50 p-3 dark:border-amber-500/20 dark:bg-black/10"
               : "rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-[#1F1F1F]"
           }
         >
           <p
-            className={`text-[11px] font-semibold uppercase tracking-wide ${isFirst ? "text-[#8a6a00] dark:text-amber-300/80" : "text-gray-500"}`}
+            className={`text-[11px] font-semibold uppercase tracking-wide ${isFirst ? "text-[#8a6a00] dark:text-amber-400/80" : "text-gray-500"}`}
           >
             First Place
           </p>
 
           <p
-            className={`mt-1 font-semibold ${isFirst ? "text-[#5c4600] dark:text-amber-100" : ""}`}
+            className={`mt-1 font-semibold ${isFirst ? "text-[#5c4600] dark:text-gray-100" : ""}`}
           >
             {entry.metrics.firstPlaceCount}
           </p>
+
+          {firstPlaceHatTricks > 0 ? (
+            <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
+              🎩 {firstPlaceHatTricks}x hattrick
+            </span>
+          ) : null}
         </div>
 
         <div
           className={
             isFirst
-              ? "rounded-md border border-[#d4af37]/50 bg-white/50 p-3 dark:border-amber-400/20 dark:bg-black/20"
+              ? "rounded-md border border-[#d4af37]/50 bg-white/50 p-3 dark:border-amber-500/20 dark:bg-black/10"
               : "rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-[#1F1F1F]"
           }
         >
           <p
-            className={`text-[11px] font-semibold uppercase tracking-wide ${isFirst ? "text-[#8a6a00] dark:text-amber-300/80" : "text-gray-500"}`}
+            className={`text-[11px] font-semibold uppercase tracking-wide ${isFirst ? "text-[#8a6a00] dark:text-amber-400/80" : "text-gray-500"}`}
           >
             Last Place
           </p>
 
           <p
-            className={`mt-1 font-semibold ${isFirst ? "text-[#5c4600] dark:text-amber-100" : ""}`}
+            className={`mt-1 font-semibold ${isFirst ? "text-[#5c4600] dark:text-gray-100" : ""}`}
           >
             {entry.metrics.lastPlaceCount}
           </p>
+
+          {lastPlaceHatTricks > 0 ? (
+            <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-bold text-red-700 dark:bg-red-500/20 dark:text-red-400">
+              💀 {lastPlaceHatTricks}x hattrick
+            </span>
+          ) : null}
         </div>
 
         <div
           className={
             isFirst
-              ? "rounded-md border border-[#d4af37]/50 bg-white/50 p-3 dark:border-amber-400/20 dark:bg-black/20"
+              ? "rounded-md border border-[#d4af37]/50 bg-white/50 p-3 dark:border-amber-500/20 dark:bg-black/10"
               : "rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-[#1F1F1F]"
           }
         >
           <p
-            className={`text-[11px] font-semibold uppercase tracking-wide ${isFirst ? "text-[#8a6a00] dark:text-amber-300/80" : "text-gray-500"}`}
+            className={`text-[11px] font-semibold uppercase tracking-wide ${isFirst ? "text-[#8a6a00] dark:text-amber-400/80" : "text-gray-500"}`}
           >
             KDR
           </p>
 
           <p
-            className={`mt-1 font-semibold ${isFirst ? "text-[#5c4600] dark:text-amber-100" : "text-gray-900 dark:text-white"}`}
+            className={`mt-1 font-semibold ${isFirst ? "text-[#5c4600] dark:text-white" : "text-gray-900 dark:text-white"}`}
           >
             {Number(entry.metrics.kdr).toFixed(2)}
           </p>
@@ -622,7 +638,7 @@ export function LeaderboardsPage() {
                       key={entry.player.id}
                       className={`relative border-b transition-colors last:border-b-0 ${
                         entry.rank === 1
-                          ? "border-amber-300/60 bg-gradient-to-r from-[#fff6dd] via-[#ffe8a8] to-[#fff6dd] bg-[length:200%_100%] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.8),inset_4px_0_0_0_#d4af37,0_4px_16px_-6px_rgba(212,175,55,0.55)] hover:bg-[right_center] dark:border-amber-500/30 dark:bg-gradient-to-r dark:from-[#3a2f0f] dark:via-[#5c4a15] dark:to-[#3a2f0f] dark:shadow-[inset_4px_0_0_0_#e6c866,0_4px_16px_-6px_rgba(212,175,55,0.35)]"
+                          ? "border-amber-300/60 bg-gradient-to-r from-[#fff6dd] via-[#ffe8a8] to-[#fff6dd] bg-[length:200%_100%] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.8),inset_4px_0_0_0_#d4af37,0_4px_16px_-6px_rgba(212,175,55,0.55)] hover:bg-[right_center] dark:border-amber-500/30 dark:bg-none dark:bg-amber-500/10 dark:shadow-[inset_3px_0_0_0_#fbbf24] dark:hover:bg-amber-500/[0.14]"
                           : `border-gray-200 dark:border-gray-800 ${
                               index % 2 === 0
                                 ? "bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800/80"
@@ -642,7 +658,7 @@ export function LeaderboardsPage() {
                         <span
                           className={
                             entry.rank === 1
-                              ? "inline-flex items-center gap-2 text-base font-extrabold text-[#8a6a00] [text-shadow:0_1px_0_rgba(255,255,255,0.6)] dark:text-amber-300"
+                              ? "inline-flex items-center gap-2 text-base font-extrabold text-[#8a6a00] [text-shadow:0_1px_0_rgba(255,255,255,0.6)] dark:text-amber-400 dark:[text-shadow:none]"
                               : "inline-flex items-center gap-2 font-semibold"
                           }
                         >
@@ -655,12 +671,12 @@ export function LeaderboardsPage() {
                           to={`/players/${entry.player.playerId}`}
                           className={`flex items-center gap-3 rounded-md font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-blue-500 ${
                             entry.rank === 1
-                              ? "text-[#5c4600] hover:text-[#8a6a00] dark:text-amber-100 dark:hover:text-amber-200"
+                              ? "text-[#5c4600] hover:text-[#8a6a00] dark:text-white dark:hover:text-amber-300"
                               : "text-gray-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-300"
                           }`}
                         >
                           {entry.rank === 1 ? (
-                            <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-md border-2 border-[#d4af37] bg-gray-100 font-semibold shadow-[0_0_10px_-2px_rgba(212,175,55,0.8)] dark:bg-[#292929]">
+                            <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-md border-2 border-[#d4af37] bg-gray-100 font-semibold shadow-[0_0_10px_-2px_rgba(212,175,55,0.8)] dark:border-amber-400 dark:bg-[#292929] dark:shadow-none">
                               {entry.player.photoUrl ? (
                                 <img
                                   src={entry.player.photoUrl}
@@ -682,7 +698,7 @@ export function LeaderboardsPage() {
                             <small
                               className={`mt-0.5 block font-bold ${
                                 entry.rank === 1
-                                  ? "text-[#8a6a00]/80 dark:text-amber-300/70"
+                                  ? "text-[#8a6a00]/80 dark:text-amber-400/70"
                                   : "text-gray-500 dark:text-gray-400"
                               }`}
                             >
@@ -697,7 +713,7 @@ export function LeaderboardsPage() {
                           Number(entry.value) < 0
                             ? "text-red-600 dark:text-red-400"
                             : entry.rank === 1
-                              ? "text-[#7a5d00] dark:text-amber-200"
+                              ? "text-[#7a5d00] dark:text-white"
                               : "text-gray-900 dark:text-white"
                         }`}
                       >
@@ -708,7 +724,7 @@ export function LeaderboardsPage() {
                         <span
                           className={
                             entry.rank === 1
-                              ? "inline-flex min-w-9 justify-center rounded-md border border-[#d4af37]/50 bg-white/50 px-2.5 py-1 font-bold text-[#7a5d00] dark:bg-black/20 dark:text-amber-200"
+                              ? "inline-flex min-w-9 justify-center rounded-md border border-[#d4af37]/50 bg-white/50 px-2.5 py-1 font-bold text-[#7a5d00] dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300"
                               : "inline-flex min-w-9 justify-center rounded-md bg-gray-100 px-2.5 py-1 font-bold dark:bg-[#292929] dark:text-gray-200"
                           }
                         >
@@ -725,43 +741,61 @@ export function LeaderboardsPage() {
                       <td
                         className={`px-5 py-5 font-bold ${
                           entry.rank === 1
-                            ? "text-[#7a5d00] dark:text-amber-200"
+                            ? "text-[#7a5d00] dark:text-gray-100"
                             : "text-gray-800 dark:text-gray-100"
                         }`}
                       >
-                        <span
-                          className={
-                            entry.rank === 1
-                              ? "inline-flex min-w-9 justify-center rounded-md border border-[#d4af37]/50 bg-white/50 px-2.5 py-1 text-[#7a5d00] dark:bg-black/20 dark:text-amber-200"
-                              : "inline-flex min-w-9 justify-center rounded-md border border-gray-200 bg-gray-100/80 px-2.5 py-1 text-gray-800 dark:border-gray-800 dark:bg-[#292929] dark:text-gray-200"
-                          }
-                        >
-                          {entry.metrics.firstPlaceCount}
-                        </span>
+                        <div className="flex flex-col items-start gap-1">
+                          <span
+                            className={
+                              entry.rank === 1
+                                ? "inline-flex min-w-9 justify-center rounded-md border border-[#d4af37]/50 bg-white/50 px-2.5 py-1 text-[#7a5d00] dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300"
+                                : "inline-flex min-w-9 justify-center rounded-md border border-gray-200 bg-gray-100/80 px-2.5 py-1 text-gray-800 dark:border-gray-800 dark:bg-[#292929] dark:text-gray-200"
+                            }
+                          >
+                            {entry.metrics.firstPlaceCount}
+                          </span>
+
+                          {Math.floor((entry.metrics.firstPlaceCount ?? 0) / 3) > 0 ? (
+                            <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
+                              🎩 {Math.floor((entry.metrics.firstPlaceCount ?? 0) / 3)}x
+                              hattrick
+                            </span>
+                          ) : null}
+                        </div>
                       </td>
 
                       <td
                         className={`px-5 py-5 font-bold ${
                           entry.rank === 1
-                            ? "text-[#7a5d00] dark:text-amber-200"
+                            ? "text-[#7a5d00] dark:text-gray-100"
                             : "text-gray-800 dark:text-gray-100"
                         }`}
                       >
-                        <span
-                          className={
-                            entry.rank === 1
-                              ? "inline-flex min-w-9 justify-center rounded-md border border-[#d4af37]/50 bg-white/50 px-2.5 py-1 text-[#7a5d00] dark:bg-black/20 dark:text-amber-200"
-                              : "inline-flex min-w-9 justify-center rounded-md border border-gray-200 bg-gray-100/80 px-2.5 py-1 text-gray-800 dark:border-gray-800 dark:bg-[#292929] dark:text-gray-200"
-                          }
-                        >
-                          {entry.metrics.lastPlaceCount}
-                        </span>
+                        <div className="flex flex-col items-start gap-1">
+                          <span
+                            className={
+                              entry.rank === 1
+                                ? "inline-flex min-w-9 justify-center rounded-md border border-[#d4af37]/50 bg-white/50 px-2.5 py-1 text-[#7a5d00] dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300"
+                                : "inline-flex min-w-9 justify-center rounded-md border border-gray-200 bg-gray-100/80 px-2.5 py-1 text-gray-800 dark:border-gray-800 dark:bg-[#292929] dark:text-gray-200"
+                            }
+                          >
+                            {entry.metrics.lastPlaceCount}
+                          </span>
+
+                          {Math.floor((entry.metrics.lastPlaceCount ?? 0) / 3) > 0 ? (
+                            <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-red-500/15 px-2 py-0.5 text-[10px] font-bold text-red-700 dark:bg-red-500/20 dark:text-red-400">
+                              💀 {Math.floor((entry.metrics.lastPlaceCount ?? 0) / 3)}x
+                              hattrick
+                            </span>
+                          ) : null}
+                        </div>
                       </td>
 
                       <td
                         className={`px-5 py-5 font-bold ${
                           entry.rank === 1
-                            ? "text-[#7a5d00] dark:text-amber-200"
+                            ? "text-[#7a5d00] dark:text-white"
                             : "text-gray-900 dark:text-white"
                         }`}
                       >
