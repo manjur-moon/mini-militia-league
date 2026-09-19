@@ -12,6 +12,12 @@ import { OCRJob } from "../models/ocr-job.model.js";
 import { Player } from "../models/player.model.js";
 import { AppError } from "../utils/app-error.js";
 import { assignDenseKillPlacements } from "../utils/dense-kill-ranking.js";
+import {
+  assertLeagueDateNotFuture,
+  leagueDateToCanonicalInstant,
+  resolveLegacyLeagueDate,
+  resolveRequestedLeagueDate,
+} from "../utils/league-date.js";
 import { achievementService } from "./achievement.service.js";
 import { challengeService } from "./challenge.service.js";
 import { cloudinaryImageService } from "./cloudinary-image.service.js";
@@ -55,8 +61,8 @@ function serializeResult(value) {
   };
 }
 
-function matchCode(id, date = new Date()) {
-  const day = date.toISOString().slice(0, 10).replaceAll("-", "");
+function matchCode(id, leagueDate) {
+  const day = leagueDate.replaceAll("-", "");
 
   return `MT-${day}-${String(id).slice(-8).toUpperCase()}`;
 }
@@ -113,13 +119,25 @@ export function createMatchService({
         });
       }
 
+      const leagueDate = resolveRequestedLeagueDate(
+        input,
+        env.LEAGUE_TIMEZONE,
+      );
+
+      assertLeagueDateNotFuture(leagueDate, env.LEAGUE_TIMEZONE);
+
+      const canonicalMatchDate = leagueDateToCanonicalInstant(
+        leagueDate,
+        env.LEAGUE_TIMEZONE,
+      );
+
       const assignedSeason = await seasonManager.resolveForMatch({
-        matchDate: input.matchDate,
+        matchDate: canonicalMatchDate,
         requestedSeasonId: input.seasonId ?? null,
       });
 
       const id = new mongoose.Types.ObjectId();
-      const code = matchCode(id);
+      const code = matchCode(id, leagueDate);
 
       const asset = await imageService.uploadMatchScreenshot({
         buffer: file.buffer,
@@ -141,8 +159,10 @@ export function createMatchService({
             detectedFormat: file.detectedFormat,
             mimeType: file.mimetype,
           },
-          matchDate: new Date(input.matchDate),
-          timezone: input.timezone,
+          matchDate: canonicalMatchDate,
+          leagueDate,
+          leagueDateSource: "explicit",
+          timezone: env.LEAGUE_TIMEZONE,
           seasonId: assignedSeason?._id ?? null,
           participantCount: input.participantCount,
           uploadedBy: actor.id,
@@ -169,6 +189,7 @@ export function createMatchService({
           newValue: {
             matchCode: code,
             status: "uploaded",
+            leagueDate,
             sha256,
           },
           reason: "Match screenshot uploaded for OCR processing.",
@@ -210,15 +231,17 @@ export function createMatchService({
         );
       }
 
-      if (query.dateFrom || query.dateTo) {
-        filter.matchDate = {};
+      if (query.leagueDate) {
+        filter.leagueDate = query.leagueDate;
+      } else if (query.dateFrom || query.dateTo) {
+        filter.leagueDate = {};
 
         if (query.dateFrom) {
-          filter.matchDate.$gte = new Date(query.dateFrom);
+          filter.leagueDate.$gte = query.dateFrom;
         }
 
         if (query.dateTo) {
-          filter.matchDate.$lte = new Date(query.dateTo);
+          filter.leagueDate.$lte = query.dateTo;
         }
       }
 
@@ -227,7 +250,8 @@ export function createMatchService({
       const [items, totalItems] = await Promise.all([
         MatchModel.find(filter)
           .sort({
-            createdAt: -1,
+            [query.sortBy ?? "leagueDate"]: query.sortOrder === "asc" ? 1 : -1,
+            _id: -1,
           })
           .skip(skip)
           .limit(query.limit)
@@ -525,14 +549,28 @@ export function createMatchService({
         }
       }
 
+      const leagueDate = resolveRequestedLeagueDate(
+        input,
+        env.LEAGUE_TIMEZONE,
+      );
+
+      assertLeagueDateNotFuture(leagueDate, env.LEAGUE_TIMEZONE);
+
+      const canonicalMatchDate = leagueDateToCanonicalInstant(
+        leagueDate,
+        env.LEAGUE_TIMEZONE,
+      );
+
       const assignedSeason = await seasonManager.resolveForMatch({
-        matchDate: input.matchDate,
+        matchDate: canonicalMatchDate,
         requestedSeasonId: input.seasonId ?? null,
       });
 
       match.participantCount = rankedRows.length;
-      match.matchDate = new Date(input.matchDate);
-      match.timezone = input.timezone;
+      match.matchDate = canonicalMatchDate;
+      match.leagueDate = leagueDate;
+      match.leagueDateSource = "explicit";
+      match.timezone = env.LEAGUE_TIMEZONE;
       match.seasonId = assignedSeason?._id ?? null;
       match.status = "needs_review";
       match.reviewStartedBy = actor.id;
@@ -547,6 +585,7 @@ export function createMatchService({
         entityType: "match",
         entityId: String(match._id),
         newValue: {
+          leagueDate: match.leagueDate,
           participantCount: rankedRows.length,
         },
         reason: input.reason,
@@ -575,6 +614,14 @@ export function createMatchService({
               code: "MATCH_ALREADY_VERIFIED",
               message: "This match is already verified.",
             });
+          }
+
+          if (!match.leagueDate) {
+            match.leagueDate = resolveLegacyLeagueDate(
+              match.matchDate,
+              match.timezone ?? env.LEAGUE_TIMEZONE,
+            );
+            match.leagueDateSource = "legacy_7am";
           }
 
           const assignedSeason = await seasonManager.resolveForMatch({
@@ -649,6 +696,7 @@ export function createMatchService({
                       lastCorrectedAt: null,
                     },
                     officialMatchDate: match.matchDate,
+                    officialLeagueDate: match.leagueDate,
                     officialSeasonId: match.seasonId,
                   },
                 },
@@ -831,6 +879,7 @@ export function createMatchService({
             status: "completed",
             ...(await rivalryUpdater.refreshAfterMatch({
               matchDate: verifiedMatch.matchDate,
+              leagueDate: verifiedMatch.leagueDate,
             })),
           };
         } catch {
@@ -850,7 +899,7 @@ export function createMatchService({
         try {
           const result = await challengeEvaluator.evaluatePlayerIds(affectedPlayerIds, {
             actor,
-            date: verifiedMatch.matchDate,
+            date: verifiedMatch.leagueDate ?? verifiedMatch.matchDate,
             reason: `Automatically update challenges after verifying match ${verifiedMatch.matchCode}.`,
             requestMeta,
           });

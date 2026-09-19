@@ -24,7 +24,7 @@ Only `MatchResult` documents with `status: "verified"`, whose parent `Match` is 
 - Dates are stored in UTC.
 - Weekly and monthly boundaries are resolved in the configured league IANA timezone.
 - Date-only filters are interpreted as league-local calendar dates.
-- Period end timestamps are exclusive: `startAt <= matchDate < endAt`.
+- Daily/weekly/monthly grouping uses `officialLeagueDate`; timestamp period ends remain exclusive where timestamp ranges are still required.
 - The configured `weekStartsOn` value controls weekly boundaries.
 - An active season is used when a season endpoint is called without an explicit season ID.
 

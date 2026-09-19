@@ -3,6 +3,7 @@ import { Swords } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { ErrorState } from "@/components/ui/error-state.jsx";
 import { LoadingState } from "@/components/ui/loading-state.jsx";
+import { formatLeagueDate } from "@/lib/league-date.js";
 import { getRivalryComparison, getRivalryMatches } from "@/services/rivalry.service.js";
 
 function metric(label, value) {
@@ -109,7 +110,7 @@ export function RivalryDetailPage() {
               <div>
                 <p className="font-black">{item.match.matchCode ?? item.matchId}</p>
                 <p className="text-sm text-slate-500">
-                  {new Date(item.matchDate).toLocaleString()}
+                  {formatLeagueDate(item.leagueDate)}
                 </p>
               </div>
               <p className="text-sm font-bold">

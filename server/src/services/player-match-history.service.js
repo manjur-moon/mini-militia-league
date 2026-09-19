@@ -2,7 +2,12 @@ import { createPaginationMeta } from "@mini-militia/shared";
 import { MatchResult } from "../models/match-result.model.js";
 import { Match } from "../models/match.model.js";
 import { Player } from "../models/player.model.js";
+import { env } from "../config/env.js";
 import { AppError } from "../utils/app-error.js";
+import {
+  isValidLeagueDate,
+  leagueDateFromTimestamp,
+} from "../utils/league-date.js";
 import { calculateKdr } from "./statistics.service.js";
 
 function playerNotFound() {
@@ -11,6 +16,13 @@ function playerNotFound() {
     code: "PLAYER_NOT_FOUND",
     message: "Player profile was not found.",
   });
+}
+
+function normalizeLeagueDateFilter(value) {
+  if (!value) return null;
+  return isValidLeagueDate(value, env.LEAGUE_TIMEZONE)
+    ? value
+    : leagueDateFromTimestamp(value, env.LEAGUE_TIMEZONE);
 }
 
 export function createPlayerMatchHistoryService({
@@ -45,9 +57,13 @@ export function createPlayerMatchHistoryService({
         "official.playerId": player._id,
       };
       if (query.from || query.to) {
-        filter.officialMatchDate = {};
-        if (query.from) filter.officialMatchDate.$gte = new Date(query.from);
-        if (query.to) filter.officialMatchDate.$lte = new Date(query.to);
+        filter.officialLeagueDate = {};
+        if (query.from) {
+          filter.officialLeagueDate.$gte = normalizeLeagueDateFilter(query.from);
+        }
+        if (query.to) {
+          filter.officialLeagueDate.$lte = normalizeLeagueDateFilter(query.to);
+        }
       }
       if (query.seasonId) filter.officialSeasonId = query.seasonId;
       const skip = (query.page - 1) * query.limit;
@@ -58,9 +74,10 @@ export function createPlayerMatchHistoryService({
             matchId: 1,
             official: 1,
             officialMatchDate: 1,
+            officialLeagueDate: 1,
             officialSeasonId: 1,
           })
-          .sort({ officialMatchDate: direction, _id: direction })
+          .sort({ officialLeagueDate: direction, officialMatchDate: direction, _id: direction })
           .skip(skip)
           .limit(query.limit)
           .lean(),
@@ -71,7 +88,13 @@ export function createPlayerMatchHistoryService({
         _id: { $in: matchIds },
         status: "verified",
       })
-        .select({ matchCode: 1, screenshot: 1, participantCount: 1, matchDate: 1 })
+        .select({
+          matchCode: 1,
+          screenshot: 1,
+          participantCount: 1,
+          matchDate: 1,
+          leagueDate: 1,
+        })
         .lean();
       const matchMap = new Map(matches.map((match) => [String(match._id), match]));
       return {
@@ -89,6 +112,7 @@ export function createPlayerMatchHistoryService({
                 id: String(match._id),
                 matchCode: match.matchCode,
                 matchDate: match.matchDate,
+                leagueDate: match.leagueDate ?? result.officialLeagueDate ?? null,
                 participantCount: match.participantCount,
                 screenshot: {
                   secureUrl: match.screenshot.secureUrl,

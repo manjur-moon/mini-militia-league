@@ -13,6 +13,27 @@ function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
 }
 
+function parseEnvFile(source) {
+  const values = new Map();
+  const duplicates = new Set();
+
+  for (const rawLine of source.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+
+    const separator = line.indexOf("=");
+    if (separator < 1) continue;
+
+    const key = line.slice(0, separator).trim();
+    const value = line.slice(separator + 1).trim();
+
+    if (values.has(key)) duplicates.add(key);
+    values.set(key, value);
+  }
+
+  return { values, duplicates };
+}
+
 const vercel = JSON.parse(read("vercel.json"));
 check("Vercel installs from workspace root", vercel.installCommand === "npm ci");
 check("Vercel builds the client workspace", vercel.buildCommand === "npm run build");
@@ -56,17 +77,23 @@ check(
 );
 
 const serverProductionEnv = read("server/.env.production.example");
+const parsedServerProductionEnv = parseEnvFile(serverProductionEnv);
+check(
+  "Production env contains no duplicate keys",
+  parsedServerProductionEnv.duplicates.size === 0,
+  [...parsedServerProductionEnv.duplicates].join(", ") || null,
+);
 check(
   "Production env requires secure cross-origin cookies",
-  serverProductionEnv.includes("AUTH_COOKIE_SAME_SITE=none"),
+  parsedServerProductionEnv.values.get("AUTH_COOKIE_SAME_SITE") === "none",
 );
 check(
   "Production env trusts platform proxy",
-  serverProductionEnv.includes("TRUST_PROXY=true"),
+  parsedServerProductionEnv.values.get("TRUST_PROXY") === "true",
 );
 check(
   "Production env uses tesseract OCR",
-  serverProductionEnv.includes("OCR_PROVIDER=tesseract"),
+  parsedServerProductionEnv.values.get("OCR_PROVIDER") === "tesseract",
 );
 
 const clientProductionEnv = read("client/.env.production.example");

@@ -1,5 +1,6 @@
 import { paginationQuerySchema } from "@mini-militia/shared";
 import { z } from "zod";
+import { leagueDateSchema } from "./league-date.validation.js";
 
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, "A valid MongoDB ID is required.");
 const dateTime = z
@@ -39,6 +40,7 @@ export const proposeMatchRevisionSchema = z.object({
       expectedRevision: z.number().int().min(1),
       matchChanges: z
         .object({
+          leagueDate: leagueDateSchema.optional(),
           matchDate: dateTime.optional(),
           timezone: z.string().trim().min(1).max(100).optional(),
           seasonId: z.union([objectId, z.literal(""), z.null()]).optional(),

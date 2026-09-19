@@ -191,7 +191,7 @@ export function buildDailyTrend(rows, period) {
   const grouped = new Map();
 
   for (const row of rows) {
-    const key = formatLeagueDateKey(row.matchDate, period.timezone);
+    const key = row.leagueDate ?? formatLeagueDateKey(row.matchDate, period.timezone);
 
     const value = grouped.get(key) ?? {
       date: key,

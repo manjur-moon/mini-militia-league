@@ -24,7 +24,9 @@
     "test:critical": "vitest run tests/auth.integration.test.js tests/security.integration.test.js tests/rbac-permission-matrix.test.js tests/critical-validation-hardening.test.js tests/match-verification.workflow.test.js tests/statistics.service.test.js tests/mvp-leaderboard.qa.test.js tests/ocr-result-parser.test.js --pool=threads --maxWorkers=4",
     "test:database:memory": "RUN_MONGODB_MEMORY_TESTS=true vitest run tests/mongodb-memory-critical.integration.test.js --pool=forks --maxWorkers=1",
     "seed:defaults": "node src/scripts/seed-production-defaults.js",
-    "deploy:preflight": "node src/scripts/production-preflight.js"
+    "deploy:preflight": "node src/scripts/production-preflight.js",
+    "league-dates:migrate": "node src/scripts/migrate-league-dates.js",
+    "league-dates:validate": "node src/scripts/migrate-league-dates.js --validate-only"
   },
   "dependencies": {
     "@better-auth/mongo-adapter": "^1.6.23",

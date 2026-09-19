@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/ui/empty-state.jsx";
 import { ErrorState } from "@/components/ui/error-state.jsx";
 import { LoadingState } from "@/components/ui/loading-state.jsx";
 import { PageHeader } from "@/components/ui/page-header.jsx";
+import { formatMatchLeagueDate } from "@/lib/league-date.js";
 import { SectionCard } from "@/components/ui/section-card.jsx";
 import { StatCard } from "@/components/ui/stat-card.jsx";
 import { getPeriodAnalytics } from "@/services/analytics.service.js";
@@ -194,7 +195,7 @@ export function AdminDashboardPage() {
                   <div>
                     <p className="font-black">{match.matchCode}</p>
                     <p className="text-xs text-slate-500">
-                      {new Date(match.matchDate).toLocaleString()}
+                      {formatMatchLeagueDate(match)}
                     </p>
                   </div>
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black uppercase dark:bg-slate-800">

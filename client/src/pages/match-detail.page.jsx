@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 
 import { ErrorState } from "@/components/ui/error-state.jsx";
 import { LoadingState } from "@/components/ui/loading-state.jsx";
+import { formatMatchLeagueDate } from "@/lib/league-date.js";
 import { MatchAIInsightPanel } from "@/features/ai/components/match-ai-insight-panel.jsx";
 import { PlayerAvatar } from "@/features/players/components/player-avatar.jsx";
 import { getMatch } from "@/services/match.service.js";
@@ -208,9 +209,7 @@ export function MatchDetailPage() {
             <span className="flex items-center gap-2">
               <CalendarDays size={17} aria-hidden="true" />
 
-              {match.matchDate
-                ? new Date(match.matchDate).toLocaleString()
-                : "Date unavailable"}
+              {formatMatchLeagueDate(match, { fallback: "Date unavailable" })}
             </span>
 
             <span className="flex items-center gap-2">

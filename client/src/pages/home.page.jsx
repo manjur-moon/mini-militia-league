@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { formatMatchLeagueDate } from "@/lib/league-date.js";
 import { HealthStatusCard } from "@/features/health/health-status-card.jsx";
 import { getPeriodAnalytics } from "@/services/analytics.service.js";
 import { getPeriodAISummary } from "@/services/ai-insight.service.js";
@@ -42,7 +43,7 @@ async function getHomeAnalytics() {
       status: "verified",
       page: 1,
       limit: 4,
-      sortBy: "matchDate",
+      sortBy: "leagueDate",
       sortOrder: "desc",
     }),
     getPeriodAnalytics("weekly"),
@@ -247,7 +248,7 @@ export function HomePage() {
               <div className="p-4">
                 <p className="font-black">{match.matchCode}</p>
                 <p className="mt-1 text-xs text-slate-500">
-                  {new Date(match.matchDate).toLocaleString()}
+                  {formatMatchLeagueDate(match)}
                 </p>
               </div>
             </Link>

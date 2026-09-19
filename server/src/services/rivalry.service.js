@@ -15,6 +15,7 @@ import {
   selectRivalOfPeriod,
 } from "./rivalry-math.service.js";
 import {
+  leagueDateRangeForPeriod,
   resolveAllTimePeriod,
   resolveMonthlyPeriod,
   resolveSeasonPeriod,
@@ -39,12 +40,17 @@ function notFound(code = "PLAYER_NOT_FOUND", message = "Player was not found.") 
 function periodFilter(period) {
   const filter = {
     status: "verified",
-    officialMatchDate: { $gte: period.startAt, $lt: period.endAt },
     "official.playerId": { $type: "objectId" },
   };
+
   if (period.type === "season" && period.seasonId) {
     filter.officialSeasonId = period.seasonId;
+    return filter;
   }
+
+  const leagueDateRange = leagueDateRangeForPeriod(period);
+  if (leagueDateRange) filter.officialLeagueDate = leagueDateRange;
+
   return filter;
 }
 
@@ -225,8 +231,14 @@ export function createRivalryService({
     }
 
     const rows = await MatchResultModel.find(periodFilter(period))
-      .select({ matchId: 1, official: 1, officialMatchDate: 1, updatedAt: 1 })
-      .sort({ officialMatchDate: 1, rowIndex: 1 })
+      .select({
+        matchId: 1,
+        official: 1,
+        officialMatchDate: 1,
+        officialLeagueDate: 1,
+        updatedAt: 1,
+      })
+      .sort({ officialLeagueDate: 1, officialMatchDate: 1, rowIndex: 1 })
       .lean();
     const rivalries = buildRivalriesFromMatches(groupRows(rows));
     const pairKeys = rivalries.map((item) => item.pairKey);
@@ -343,8 +355,13 @@ export function createRivalryService({
       ...baseFilter,
       "official.playerId": player._id,
     })
-      .select({ matchId: 1, official: 1, officialMatchDate: 1 })
-      .sort({ officialMatchDate: -1 })
+      .select({
+        matchId: 1,
+        official: 1,
+        officialMatchDate: 1,
+        officialLeagueDate: 1,
+      })
+      .sort({ officialLeagueDate: -1, officialMatchDate: -1 })
       .lean();
     const matchIds = playerRows.map((item) => item.matchId);
     const opponentRows = await MatchResultModel.find({
@@ -352,7 +369,12 @@ export function createRivalryService({
       matchId: { $in: matchIds },
       "official.playerId": opponent._id,
     })
-      .select({ matchId: 1, official: 1, officialMatchDate: 1 })
+      .select({
+        matchId: 1,
+        official: 1,
+        officialMatchDate: 1,
+        officialLeagueDate: 1,
+      })
       .lean();
     const opponentByMatch = new Map(
       opponentRows.map((item) => [String(item.matchId), item]),
@@ -377,6 +399,7 @@ export function createRivalryService({
         return {
           matchId: String(item.matchId),
           matchDate: item.officialMatchDate,
+          leagueDate: item.officialLeagueDate ?? null,
           outcome: outcome === "left" ? "win" : outcome === "right" ? "loss" : "draw",
           playerResult,
           opponentResult,
@@ -389,7 +412,7 @@ export function createRivalryService({
       _id: { $in: pageItems.map((item) => item.matchId) },
       status: "verified",
     })
-      .select({ matchCode: 1, screenshot: 1, matchDate: 1, participantCount: 1 })
+      .select({ matchCode: 1, screenshot: 1, matchDate: 1, leagueDate: 1, participantCount: 1 })
       .lean();
     const matchById = new Map(matches.map((match) => [String(match._id), match]));
     return {
@@ -497,16 +520,24 @@ export function createRivalryService({
     return { calculationVersion: RIVALRY_CALCULATION_VERSION, results };
   }
 
-  async function refreshAfterMatch({ matchDate, previousMatchDate = null }) {
+  async function refreshAfterMatch({
+    matchDate,
+    leagueDate = null,
+    previousMatchDate = null,
+    previousLeagueDate = null,
+  }) {
+    const currentPeriodDate = leagueDate ?? matchDate;
+    const previousPeriodDate = previousLeagueDate ?? previousMatchDate;
+
     const periods = [
       await resolvePeriod({ periodType: "all_time" }),
-      await resolvePeriod({ periodType: "weekly", date: matchDate }),
-      await resolvePeriod({ periodType: "monthly", date: matchDate }),
+      await resolvePeriod({ periodType: "weekly", date: currentPeriodDate }),
+      await resolvePeriod({ periodType: "monthly", date: currentPeriodDate }),
     ];
-    if (previousMatchDate) {
+    if (previousPeriodDate) {
       periods.push(
-        await resolvePeriod({ periodType: "weekly", date: previousMatchDate }),
-        await resolvePeriod({ periodType: "monthly", date: previousMatchDate }),
+        await resolvePeriod({ periodType: "weekly", date: previousPeriodDate }),
+        await resolvePeriod({ periodType: "monthly", date: previousPeriodDate }),
       );
     }
     const uniquePeriods = [

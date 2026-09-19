@@ -83,7 +83,7 @@ export function deriveRatingInputs(rows, timezone) {
       row.placement === row.participantCount,
   ).length;
   const activeDays = new Set(
-    rows.map((row) => formatLeagueDateKey(row.matchDate, timezone)),
+    rows.map((row) => row.leagueDate ?? formatLeagueDateKey(row.matchDate, timezone)),
   ).size;
 
   return {

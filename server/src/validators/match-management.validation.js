@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { leagueDateSchema } from "./league-date.validation.js";
 
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, "A valid MongoDB ID is required.");
 const dateTime = z
@@ -23,6 +24,7 @@ const resultInput = z
 export const updateMatchMetadataSchema = z.object({
   body: z
     .object({
+      leagueDate: leagueDateSchema.optional(),
       matchDate: dateTime.optional(),
       timezone: timezone.optional(),
       seasonId: z.union([objectId, z.literal(""), z.null()]).optional(),
@@ -34,6 +36,7 @@ export const updateMatchMetadataSchema = z.object({
     .strict()
     .refine(
       (value) =>
+        value.leagueDate !== undefined ||
         value.matchDate !== undefined ||
         value.timezone !== undefined ||
         value.seasonId !== undefined ||

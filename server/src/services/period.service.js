@@ -4,7 +4,6 @@ import { env } from "../config/env.js";
 import { AppError } from "../utils/app-error.js";
 
 export const DEFAULT_WEEK_STARTS_ON = 1;
-export const DEFAULT_LEAGUE_DAY_START_HOUR = 7;
 
 function assertTimezone(timezone) {
   if (!IANAZone.isValidZone(timezone)) {
@@ -12,16 +11,6 @@ function assertTimezone(timezone) {
       statusCode: 422,
       code: "INVALID_TIMEZONE",
       message: "A valid IANA league timezone is required.",
-    });
-  }
-}
-
-function assertLeagueDayStartHour(dayStartHour) {
-  if (!Number.isInteger(dayStartHour) || dayStartHour < 0 || dayStartHour > 23) {
-    throw new AppError({
-      statusCode: 422,
-      code: "INVALID_LEAGUE_DAY_START_HOUR",
-      message: "League day start hour must be a whole number from 0 through 23.",
     });
   }
 }
@@ -91,42 +80,18 @@ function serializePeriod({
 }
 
 /**
- * Resolves a league day using a configurable rollover hour.
+ * Resolves a league-local calendar day.
  *
- * For LEAGUE_DAY_START_HOUR=7:
- *
- * 29 Jul 2026 07:00 inclusive
- * through
- * 30 Jul 2026 07:00 exclusive
- *
- * A date-only input explicitly selects that league-day key.
- *
- * A timestamp input is classified according to the actual
- * league-day boundary. Therefore, 29 Jul at 06:59 belongs
- * to the 28 Jul league day.
+ * Upload time no longer changes the business date. A daily period always
+ * starts at local midnight and ends at the next local midnight.
  */
 export function resolveDailyPeriod({
   date,
   timezone = env.LEAGUE_TIMEZONE,
-  dayStartHour = env.LEAGUE_DAY_START_HOUR ?? DEFAULT_LEAGUE_DAY_START_HOUR,
 } = {}) {
   assertTimezone(timezone);
-  assertLeagueDayStartHour(dayStartHour);
 
-  const reference = toDateTime(date, timezone);
-
-  const start = isDateOnlyInput(date)
-    ? reference.startOf("day").plus({
-        hours: dayStartHour,
-      })
-    : reference
-        .minus({
-          hours: dayStartHour,
-        })
-        .startOf("day")
-        .plus({
-          hours: dayStartHour,
-        });
+  const start = toDateTime(date, timezone).startOf("day");
 
   const end = start.plus({
     days: 1,
@@ -138,10 +103,8 @@ export function resolveDailyPeriod({
     start,
     end,
     timezone,
-    dayStartHour,
-    label: `${start.toFormat("dd LLL yyyy, h:mm a")} – ${end.toFormat(
-      "dd LLL yyyy, h:mm a",
-    )}`,
+    dayStartHour: 0,
+    label: start.toFormat("dd LLL yyyy"),
   });
 }
 
@@ -264,13 +227,7 @@ export function resolvePreviousPeriod(period) {
           days: 1,
         })
         .toJSDate(),
-
       timezone: period.timezone,
-
-      dayStartHour:
-        period.dayStartHour ??
-        env.LEAGUE_DAY_START_HOUR ??
-        DEFAULT_LEAGUE_DAY_START_HOUR,
     });
   }
 
@@ -311,10 +268,8 @@ export function periodContains(period, date) {
 export function formatLeagueDateKey(
   date,
   timezone = env.LEAGUE_TIMEZONE,
-  dayStartHour = env.LEAGUE_DAY_START_HOUR ?? DEFAULT_LEAGUE_DAY_START_HOUR,
 ) {
   assertTimezone(timezone);
-  assertLeagueDayStartHour(dayStartHour);
 
   const value = DateTime.fromJSDate(new Date(date), {
     zone: timezone,
@@ -328,9 +283,28 @@ export function formatLeagueDateKey(
     });
   }
 
-  return value
-    .minus({
-      hours: dayStartHour,
-    })
-    .toFormat("yyyy-LL-dd");
+  return value.toFormat("yyyy-LL-dd");
+}
+
+export function leagueDateRangeForPeriod(period) {
+  if (!period || !period.timezone) {
+    throw new AppError({
+      statusCode: 422,
+      code: "INVALID_PERIOD",
+      message: "A valid analytics period is required.",
+    });
+  }
+
+  if (period.type === "all_time" || period.type === "season") {
+    return null;
+  }
+
+  return {
+    $gte: DateTime.fromJSDate(period.startAt)
+      .setZone(period.timezone)
+      .toFormat("yyyy-LL-dd"),
+    $lt: DateTime.fromJSDate(period.endAt)
+      .setZone(period.timezone)
+      .toFormat("yyyy-LL-dd"),
+  };
 }

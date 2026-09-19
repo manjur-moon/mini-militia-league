@@ -527,8 +527,8 @@
 
 - **Access:** Moderator, Admin
 - **Parameters:** Idempotency-Key header
-- **Body:** multipart: screenshot, matchDate, timezone?, participantCount, seasonId?
-- **Validation:** Image signature JPEG/PNG/WebP; <=10MB; matchDate ISO; participantCount 2–50; SHA-256 duplicate check.
+- **Body:** multipart: screenshot, leagueDate (YYYY-MM-DD), participantCount, seasonId?
+- **Validation:** Image signature JPEG/PNG/WebP; <=10MB; leagueDate YYYY-MM-DD and not future; participantCount 2–50; SHA-256 duplicate check.
 - **Success:** 202 — match, screenshot metadata, OCR job and polling URL.
 - **Errors:** 400 VALIDATION_ERROR, 409 DUPLICATE_SCREENSHOT, 413 FILE_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 502 STORAGE_ERROR
 - **Pagination:** Not applicable.
@@ -613,7 +613,7 @@
 
 - **Access:** Moderator, Admin
 - **Parameters:** matchId:ObjectId
-- **Body:** matchDate?:datetime, timezone?:IANA, seasonId?:ObjectId|null, participantCount?:integer, duplicateReviewNote?:string, expectedUpdatedAt?:datetime
+- **Body:** leagueDate?:YYYY-MM-DD, seasonId?:ObjectId|null, participantCount?:integer, duplicateReviewNote?:string, expectedUpdatedAt?:datetime
 - **Validation:** Allowed only before verified/rejected; status not client-editable; participant count 2–50.
 - **Success:** 200 — updated pending match.
 - **Errors:** 400 VALIDATION_ERROR, 409 MATCH_IMMUTABLE, 409 STALE_WRITE, 404 MATCH_NOT_FOUND

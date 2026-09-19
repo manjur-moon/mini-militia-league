@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state.jsx";
 import { ErrorState } from "@/components/ui/error-state.jsx";
 import { LoadingState } from "@/components/ui/loading-state.jsx";
 import { PageHeader } from "@/components/ui/page-header.jsx";
+import { formatMatchLeagueDate, getLeagueToday } from "@/lib/league-date.js";
 import { authClient } from "@/lib/auth-client.js";
 import { deleteRejectedMatch, getMatches } from "@/services/match.service.js";
 
@@ -17,6 +18,7 @@ export function MatchesArchivePage({ basePath = "/moderator" }) {
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [leagueDate, setLeagueDate] = useState("");
   const [page, setPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
@@ -30,6 +32,7 @@ export function MatchesArchivePage({ basePath = "/moderator" }) {
       {
         deferredSearch,
         status,
+        leagueDate,
         page,
       },
     ],
@@ -38,6 +41,7 @@ export function MatchesArchivePage({ basePath = "/moderator" }) {
       getMatches({
         search: deferredSearch || undefined,
         status: status || undefined,
+        leagueDate: leagueDate || undefined,
         page,
         limit: 10,
       }),
@@ -108,7 +112,7 @@ export function MatchesArchivePage({ basePath = "/moderator" }) {
         icon={Archive}
       />
 
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_190px]">
         <label className="relative block">
           <Search
             className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -150,6 +154,18 @@ export function MatchesArchivePage({ basePath = "/moderator" }) {
             </option>
           ))}
         </select>
+
+        <input
+          type="date"
+          aria-label="Filter by match date"
+          className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 dark:border-slate-700 dark:bg-slate-900"
+          value={leagueDate}
+          max={getLeagueToday()}
+          onChange={(event) => {
+            setLeagueDate(event.target.value);
+            setPage(1);
+          }}
+        />
       </div>
 
       {query.isPending ? <LoadingState title="Loading matches" /> : null}
@@ -189,7 +205,7 @@ export function MatchesArchivePage({ basePath = "/moderator" }) {
                       </p>
 
                       <p className="mt-1 text-sm leading-5 text-slate-500">
-                        {new Date(match.matchDate).toLocaleString()}
+                        {formatMatchLeagueDate(match)}
                       </p>
 
                       <p className="mt-1 text-xs font-bold text-slate-500">

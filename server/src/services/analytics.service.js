@@ -28,6 +28,7 @@ import {
 import { mvpConfigService } from "./mvp-config.service.js";
 import {
   formatLeagueDateKey,
+  leagueDateRangeForPeriod,
   resolveAllTimePeriod,
   resolveDailyPeriod,
   resolveMonthlyPeriod,
@@ -116,6 +117,23 @@ function metricNumber(value) {
   const parsedValue = Number(value);
 
   return Number.isFinite(parsedValue) ? parsedValue : 0;
+}
+
+function verifiedPeriodFilter(period) {
+  const filter = { status: "verified" };
+
+  if (period.type === "season" && period.seasonId) {
+    filter.officialSeasonId = period.seasonId;
+    return filter;
+  }
+
+  const leagueDateRange = leagueDateRangeForPeriod(period);
+
+  if (leagueDateRange) {
+    filter.officialLeagueDate = leagueDateRange;
+  }
+
+  return filter;
 }
 
 function calculateFirstPlaceLeaderboardScore(metrics) {
@@ -243,8 +261,6 @@ export function createAnalyticsService({
       timezone: config?.timezone ?? env.LEAGUE_TIMEZONE,
 
       weekStartsOn: config?.weekStartsOn ?? 1,
-
-      dayStartHour: env.LEAGUE_DAY_START_HOUR,
     };
   }
 
@@ -261,7 +277,6 @@ export function createAnalyticsService({
       return resolveDailyPeriod({
         date,
         timezone: settings.timezone,
-        dayStartHour: settings.dayStartHour,
       });
     }
 
@@ -313,11 +328,7 @@ export function createAnalyticsService({
   }
 
   async function getSourceFingerprint(period, formulaVersion) {
-    const match = {
-      status: "verified",
-      officialMatchDate: { $gte: period.startAt, $lt: period.endAt },
-    };
-    if (period.seasonId) match.officialSeasonId = period.seasonId;
+    const match = verifiedPeriodFilter(period);
     const aggregate = await MatchResultModel.aggregate([
       { $match: match },
       {
@@ -349,18 +360,7 @@ export function createAnalyticsService({
   }
 
   async function fetchVerifiedRows(period, playerIds = null) {
-    const filter = {
-      status: "verified",
-
-      officialMatchDate: {
-        $gte: period.startAt,
-        $lt: period.endAt,
-      },
-    };
-
-    if (period.seasonId) {
-      filter.officialSeasonId = period.seasonId;
-    }
+    const filter = verifiedPeriodFilter(period);
 
     if (playerIds?.length) {
       filter["official.playerId"] = {
@@ -373,10 +373,12 @@ export function createAnalyticsService({
         matchId: 1,
         official: 1,
         officialMatchDate: 1,
+        officialLeagueDate: 1,
         officialSeasonId: 1,
         updatedAt: 1,
       })
       .sort({
+        officialLeagueDate: 1,
         officialMatchDate: 1,
         matchId: 1,
         rowIndex: 1,
@@ -450,6 +452,7 @@ export function createAnalyticsService({
           playerName: result.official.playerName,
 
           matchDate: result.officialMatchDate,
+          leagueDate: result.officialLeagueDate,
 
           kills: result.official.kills,
 
@@ -964,19 +967,16 @@ export function createAnalyticsService({
     const weekly = new Map();
     const monthly = new Map();
     for (const row of scored) {
-      const dayKey = formatLeagueDateKey(
-        row.matchDate,
-        settings.timezone,
-        settings.dayStartHour,
-      );
+      const dayKey =
+        row.leagueDate ?? formatLeagueDateKey(row.matchDate, settings.timezone);
       daily.set(dayKey, (daily.get(dayKey) ?? 0) + 1);
       const week = resolveWeeklyPeriod({
-        date: row.matchDate,
+        date: row.leagueDate ?? row.matchDate,
         timezone: settings.timezone,
         weekStartsOn: settings.weekStartsOn,
       });
       const month = resolveMonthlyPeriod({
-        date: row.matchDate,
+        date: row.leagueDate ?? row.matchDate,
         timezone: settings.timezone,
       });
       for (const [collection, key] of [
@@ -1011,10 +1011,15 @@ export function createAnalyticsService({
         ? items.reduce((sum, item) => sum + item.performanceScore, 0) / items.length
         : 0;
     const currentRows = scored.filter(
-      (row) => DateTime.fromJSDate(row.matchDate) >= currentStart,
+      (row) =>
+        (row.leagueDate
+          ? DateTime.fromISO(row.leagueDate, { zone: settings.timezone })
+          : DateTime.fromJSDate(row.matchDate).setZone(settings.timezone)) >= currentStart,
     );
     const previousRows = scored.filter((row) => {
-      const value = DateTime.fromJSDate(row.matchDate);
+      const value = row.leagueDate
+        ? DateTime.fromISO(row.leagueDate, { zone: settings.timezone })
+        : DateTime.fromJSDate(row.matchDate).setZone(settings.timezone);
       return value >= previousStart && value < currentStart;
     });
     const improvementRate =

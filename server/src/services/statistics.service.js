@@ -223,7 +223,7 @@ export function calculatePersonalRecords(
   const dailyCounts = new Map();
 
   for (const row of rows) {
-    const key = leagueDateKey(row.matchDate, timezone);
+    const key = row.leagueDate ?? leagueDateKey(row.matchDate, timezone);
 
     dailyCounts.set(key, (dailyCounts.get(key) ?? 0) + 1);
   }
@@ -452,6 +452,7 @@ export function createStatisticsService({
         matchId: 1,
         official: 1,
         officialMatchDate: 1,
+        officialLeagueDate: 1,
       })
       .sort({
         officialMatchDate: 1,
@@ -582,6 +583,7 @@ export function createStatisticsService({
         matchId: result.matchId,
 
         matchDate: result.officialMatchDate,
+        leagueDate: result.officialLeagueDate,
 
         kills: result.official.kills,
 

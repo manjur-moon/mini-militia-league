@@ -5,6 +5,7 @@ import { Link, useParams } from "react-router-dom";
 import { EmptyState } from "@/components/ui/empty-state.jsx";
 import { ErrorState } from "@/components/ui/error-state.jsx";
 import { LoadingState } from "@/components/ui/loading-state.jsx";
+import { formatMatchLeagueDate } from "@/lib/league-date.js";
 import { getPlayerMatches } from "@/services/player.service.js";
 
 export function PlayerMatchHistoryPage() {
@@ -52,7 +53,7 @@ export function PlayerMatchHistoryPage() {
               <div>
                 <h2 className="font-black">{item.match.matchCode}</h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  {new Date(item.match.matchDate).toLocaleString()}
+                  {formatMatchLeagueDate(item.match)}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-4 text-sm font-bold">
                   <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">

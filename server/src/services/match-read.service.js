@@ -34,6 +34,7 @@ function publicMatch(value) {
     status: match.status,
     screenshot: publicScreenshot(match.screenshot),
     matchDate: match.matchDate,
+    leagueDate: match.leagueDate ?? null,
     timezone: match.timezone,
     seasonId: match.seasonId ? String(match.seasonId) : null,
     participantCount: match.participantCount,
@@ -81,15 +82,17 @@ export function createMatchReadService({
       if (query.search) {
         filter.matchCode = new RegExp(escapeRegex(query.search), "i");
       }
-      if (query.dateFrom || query.dateTo) {
-        filter.matchDate = {};
-        if (query.dateFrom) filter.matchDate.$gte = new Date(query.dateFrom);
-        if (query.dateTo) filter.matchDate.$lte = new Date(query.dateTo);
+      if (query.leagueDate) {
+        filter.leagueDate = query.leagueDate;
+      } else if (query.dateFrom || query.dateTo) {
+        filter.leagueDate = {};
+        if (query.dateFrom) filter.leagueDate.$gte = query.dateFrom;
+        if (query.dateTo) filter.leagueDate.$lte = query.dateTo;
       }
       if (query.seasonId) filter.seasonId = query.seasonId;
       const skip = (query.page - 1) * query.limit;
       const sort = {
-        [query.sortBy ?? "matchDate"]: query.sortOrder === "asc" ? 1 : -1,
+        [query.sortBy ?? "leagueDate"]: query.sortOrder === "asc" ? 1 : -1,
       };
       sort._id = -1;
       const [items, totalItems] = await Promise.all([

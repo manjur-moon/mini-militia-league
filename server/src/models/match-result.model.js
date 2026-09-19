@@ -319,6 +319,14 @@ const matchResultSchema = new mongoose.Schema(
       index: true,
     },
 
+    officialLeagueDate: {
+      type: String,
+      trim: true,
+      match: /^\d{4}-\d{2}-\d{2}$/,
+      default: null,
+      index: true,
+    },
+
     officialSeasonId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Season",
@@ -405,6 +413,23 @@ matchResultSchema.index({
 matchResultSchema.index({
   officialSeasonId: 1,
   officialMatchDate: -1,
+  status: 1,
+});
+
+matchResultSchema.index({
+  "official.playerId": 1,
+  officialLeagueDate: -1,
+  status: 1,
+});
+
+matchResultSchema.index({
+  officialSeasonId: 1,
+  officialLeagueDate: -1,
+  status: 1,
+});
+
+matchResultSchema.index({
+  officialLeagueDate: 1,
   status: 1,
 });
 

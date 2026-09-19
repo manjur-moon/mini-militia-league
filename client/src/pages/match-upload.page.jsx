@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/page-header.jsx";
+import { getLeagueToday } from "@/lib/league-date.js";
 import { uploadMatchScreenshot } from "@/services/match.service.js";
 
 const fieldClass =
@@ -12,9 +13,9 @@ const fieldClass =
 export function MatchUploadPage({ basePath = "/moderator" }) {
   const navigate = useNavigate();
   const [file, setFile] = useState(null);
-  const [matchDate, setMatchDate] = useState(new Date().toISOString().slice(0, 16));
+  const leagueToday = getLeagueToday();
+  const [leagueDate, setLeagueDate] = useState(leagueToday);
   const [participantCount, setParticipantCount] = useState(4);
-  const [timezone, setTimezone] = useState("Asia/Dhaka");
 
   const mutation = useMutation({
     mutationFn: uploadMatchScreenshot,
@@ -30,9 +31,8 @@ export function MatchUploadPage({ basePath = "/moderator" }) {
     if (!file) return toast.error("Select a match screenshot.");
     mutation.mutate({
       file,
-      matchDate: new Date(matchDate).toISOString(),
+      leagueDate,
       participantCount: Number(participantCount),
-      timezone,
     });
   }
 
@@ -41,7 +41,7 @@ export function MatchUploadPage({ basePath = "/moderator" }) {
       <PageHeader
         eyebrow="Moderator workflow"
         title="Upload match screenshot"
-        description="The original image is preserved, queued for OCR and must be reviewed before it can become official."
+        description="Choose the date the match belongs to, then upload the screenshot. Upload time does not affect the match date."
         icon={Upload}
       />
       <form
@@ -60,16 +60,20 @@ export function MatchUploadPage({ basePath = "/moderator" }) {
             JPEG, PNG or WebP. Maximum 10 MB.
           </span>
         </label>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <label className="text-sm font-bold">
-            Match date and time
+            Match date
             <input
               className={fieldClass}
-              type="datetime-local"
-              value={matchDate}
-              onChange={(event) => setMatchDate(event.target.value)}
+              type="date"
+              value={leagueDate}
+              max={leagueToday}
+              onChange={(event) => setLeagueDate(event.target.value)}
               required
             />
+            <span className="mt-2 block text-xs font-medium text-slate-500">
+              You can upload a previous date at any time. Future dates are not allowed.
+            </span>
           </label>
           <label className="text-sm font-bold">
             Participant count
@@ -80,15 +84,6 @@ export function MatchUploadPage({ basePath = "/moderator" }) {
               max="50"
               value={participantCount}
               onChange={(event) => setParticipantCount(event.target.value)}
-              required
-            />
-          </label>
-          <label className="text-sm font-bold">
-            League timezone
-            <input
-              className={fieldClass}
-              value={timezone}
-              onChange={(event) => setTimezone(event.target.value)}
               required
             />
           </label>

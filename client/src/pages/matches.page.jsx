@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { EmptyState } from "@/components/ui/empty-state.jsx";
 import { ErrorState } from "@/components/ui/error-state.jsx";
 import { LoadingState } from "@/components/ui/loading-state.jsx";
+import { formatMatchLeagueDate } from "@/lib/league-date.js";
 import { getMatches } from "@/services/match.service.js";
 
 export function MatchesPage() {
@@ -18,7 +19,7 @@ export function MatchesPage() {
         search: deferredSearch || undefined,
         page,
         limit: 12,
-        sortBy: "matchDate",
+        sortBy: "leagueDate",
         sortOrder: "desc",
       }),
   });
@@ -78,7 +79,7 @@ export function MatchesPage() {
                 <div className="grid gap-2 text-sm text-slate-500">
                   <p className="flex items-center gap-2">
                     <CalendarDays size={16} />
-                    {new Date(match.matchDate).toLocaleString()}
+                    {formatMatchLeagueDate(match)}
                   </p>
                   <p className="flex items-center gap-2">
                     <Users size={16} /> {match.participantCount} players

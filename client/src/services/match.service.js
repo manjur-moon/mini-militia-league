@@ -4,8 +4,7 @@ export async function uploadMatchScreenshot(input) {
   const formData = new FormData();
 
   formData.append("screenshot", input.file);
-  formData.append("matchDate", input.matchDate);
-  formData.append("timezone", input.timezone);
+  formData.append("leagueDate", input.leagueDate);
   formData.append("participantCount", String(input.participantCount));
 
   if (input.seasonId) {

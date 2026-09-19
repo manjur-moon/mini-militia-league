@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/empty-state.jsx";
 import { ErrorState } from "@/components/ui/error-state.jsx";
 import { LoadingState } from "@/components/ui/loading-state.jsx";
 import { PageHeader } from "@/components/ui/page-header.jsx";
+import { formatMatchLeagueDate } from "@/lib/league-date.js";
 import { SectionCard } from "@/components/ui/section-card.jsx";
 import { StatCard } from "@/components/ui/stat-card.jsx";
 import { getMatches } from "@/services/match.service.js";
@@ -106,7 +107,7 @@ export function ModeratorDashboardPage() {
                     <p className="font-black">{match.matchCode}</p>
                     <p className="text-xs text-slate-500">
                       {match.participantCount} players ·{" "}
-                      {new Date(match.matchDate).toLocaleString()}
+                      {formatMatchLeagueDate(match)}
                     </p>
                   </div>
                   <span className="font-bold text-amber-700 dark:text-amber-300">

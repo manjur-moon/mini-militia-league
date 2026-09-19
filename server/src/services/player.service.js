@@ -236,8 +236,13 @@ export function createPlayerService({
           status: "verified",
           "official.playerId": player._id,
         })
-          .select({ matchId: 1, official: 1, officialMatchDate: 1 })
-          .sort({ officialMatchDate: -1 })
+          .select({
+            matchId: 1,
+            official: 1,
+            officialMatchDate: 1,
+            officialLeagueDate: 1,
+          })
+          .sort({ officialLeagueDate: -1, officialMatchDate: -1 })
           .limit(5)
           .lean(),
       ]);
@@ -245,7 +250,13 @@ export function createPlayerService({
         _id: { $in: recentResults.map((result) => result.matchId) },
         status: "verified",
       })
-        .select({ matchCode: 1, matchDate: 1, participantCount: 1, screenshot: 1 })
+        .select({
+          matchCode: 1,
+          matchDate: 1,
+          leagueDate: 1,
+          participantCount: 1,
+          screenshot: 1,
+        })
         .lean();
       const matchMap = new Map(matches.map((match) => [String(match._id), match]));
 
@@ -269,6 +280,7 @@ export function createPlayerService({
                 id: String(match._id),
                 matchCode: match.matchCode,
                 matchDate: match.matchDate,
+                leagueDate: match.leagueDate ?? result.officialLeagueDate ?? null,
                 participantCount: match.participantCount,
                 screenshot: { secureUrl: match.screenshot.secureUrl },
               },

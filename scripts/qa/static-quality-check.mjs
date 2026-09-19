@@ -128,6 +128,43 @@ record(
   /!env\.isProduction\s*&&\s*normalizedError\.statusCode\s*===\s*500/.test(errorSource),
 );
 
+
+const periodSource = await text("server/src/services/period.service.js");
+record(
+  "Daily periods use league-local midnight",
+  /resolveDailyPeriod[\s\S]*startOf\("day"\)[\s\S]*dayStartHour:\s*0/.test(periodSource),
+);
+
+const leagueDateSource = await text("server/src/utils/league-date.js");
+record(
+  "Legacy 7 AM logic is isolated to migration compatibility",
+  leagueDateSource.includes("LEGACY_LEAGUE_DAY_START_HOUR = 7") &&
+    !periodSource.includes("LEGACY_LEAGUE_DAY_START_HOUR"),
+);
+
+const environmentSource = await text("server/src/config/env.js");
+const renderSource = await text("render.yaml");
+record(
+  "No active league-day cutoff configuration remains",
+  !environmentSource.includes("LEAGUE_DAY_START_HOUR") &&
+    !renderSource.includes("LEAGUE_DAY_START_HOUR"),
+);
+
+const leaderboardSource = await text("client/src/pages/leaderboards.page.jsx");
+record(
+  "Leaderboard UI has no 7 AM fallback semantics",
+  !/dayStartHour\s*\?\?\s*7/.test(leaderboardSource) &&
+    !leaderboardSource.includes("belong to the previous league day"),
+);
+
+const openApiSource = await text("docs/openapi.yaml");
+record(
+  "OpenAPI uses leagueDate upload contract",
+  openApiSource.includes("multipart: screenshot, leagueDate (YYYY-MM-DD)") &&
+    !openApiSource.includes("LEAGUE_DAY_START_HOUR") &&
+    !openApiSource.includes("multipart: screenshot, matchDate"),
+);
+
 const packageJson = JSON.parse(await text("package.json"));
 record("Root QA command exists", Boolean(packageJson.scripts?.qa));
 record("Coverage command exists", Boolean(packageJson.scripts?.["test:coverage"]));

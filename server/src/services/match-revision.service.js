@@ -1,6 +1,7 @@
 import { createPaginationMeta } from "@mini-militia/shared";
 import mongoose from "mongoose";
 
+import { env } from "../config/env.js";
 import { AuditLog } from "../models/audit-log.model.js";
 import { MatchResult } from "../models/match-result.model.js";
 import { MatchRevision } from "../models/match-revision.model.js";
@@ -12,6 +13,12 @@ import {
   hasUniquePlayerIds,
   hasUniqueResultIds,
 } from "../utils/dense-kill-ranking.js";
+import {
+  assertLeagueDateNotFuture,
+  leagueDateToCanonicalInstant,
+  resolveLegacyLeagueDate,
+  resolveRequestedLeagueDate,
+} from "../utils/league-date.js";
 import { achievementService } from "./achievement.service.js";
 import { challengeService } from "./challenge.service.js";
 import { hallOfFameService } from "./hall-of-fame.service.js";
@@ -87,6 +94,8 @@ function matchSnapshot(match) {
   return {
     matchCode: match.matchCode,
     matchDate: match.matchDate,
+    leagueDate: match.leagueDate ?? null,
+    leagueDateSource: match.leagueDateSource ?? null,
     timezone: match.timezone,
     seasonId: match.seasonId ?? null,
     participantCount: match.participantCount,
@@ -278,8 +287,25 @@ export function createMatchRevisionService({
         })
         .lean();
 
-      const proposedMatchDate = input.matchChanges?.matchDate
-        ? new Date(input.matchChanges.matchDate)
+      const dateWasProvided =
+        input.matchChanges?.leagueDate !== undefined ||
+        input.matchChanges?.matchDate !== undefined;
+
+      const currentLeagueDate =
+        match.leagueDate ??
+        resolveLegacyLeagueDate(
+          match.matchDate,
+          match.timezone ?? env.LEAGUE_TIMEZONE,
+        );
+
+      const proposedLeagueDate = dateWasProvided
+        ? resolveRequestedLeagueDate(input.matchChanges, env.LEAGUE_TIMEZONE)
+        : currentLeagueDate;
+
+      assertLeagueDateNotFuture(proposedLeagueDate, env.LEAGUE_TIMEZONE);
+
+      const proposedMatchDate = dateWasProvided
+        ? leagueDateToCanonicalInstant(proposedLeagueDate, env.LEAGUE_TIMEZONE)
         : match.matchDate;
 
       const requestedSeasonId =
@@ -295,7 +321,11 @@ export function createMatchRevisionService({
       const proposedMatchSnapshot = {
         ...matchSnapshot(match),
         matchDate: proposedMatchDate,
-        timezone: input.matchChanges?.timezone ?? match.timezone,
+        leagueDate: proposedLeagueDate,
+        leagueDateSource: dateWasProvided
+          ? "explicit"
+          : match.leagueDateSource ?? "legacy_7am",
+        timezone: env.LEAGUE_TIMEZONE,
         seasonId: assignedSeason?._id ?? null,
         participantCount,
       };
@@ -348,6 +378,7 @@ export function createMatchRevisionService({
       let affectedPlayerIds = [];
       let revisionId;
       let previousMatchDate = null;
+      let previousLeagueDate = null;
 
       try {
         await session.withTransaction(async () => {
@@ -376,6 +407,13 @@ export function createMatchRevisionService({
 
           previousMatchDate =
             revision.previousMatchSnapshot?.matchDate ?? match.matchDate;
+          previousLeagueDate =
+            revision.previousMatchSnapshot?.leagueDate ??
+            match.leagueDate ??
+            resolveLegacyLeagueDate(
+              previousMatchDate,
+              match.timezone ?? env.LEAGUE_TIMEZONE,
+            );
 
           if (
             match.currentRevision !== input.expectedMatchRevision ||
@@ -443,6 +481,7 @@ export function createMatchRevisionService({
             result.official.lastCorrectedBy = actor.id;
             result.official.lastCorrectedAt = now;
             result.officialMatchDate = revision.proposedMatchSnapshot.matchDate;
+            result.officialLeagueDate = revision.proposedMatchSnapshot.leagueDate;
             result.officialSeasonId = revision.proposedMatchSnapshot.seasonId ?? null;
 
             await result.save({
@@ -451,7 +490,10 @@ export function createMatchRevisionService({
           }
 
           match.matchDate = revision.proposedMatchSnapshot.matchDate;
-          match.timezone = revision.proposedMatchSnapshot.timezone;
+          match.leagueDate = revision.proposedMatchSnapshot.leagueDate;
+          match.leagueDateSource =
+            revision.proposedMatchSnapshot.leagueDateSource ?? "explicit";
+          match.timezone = env.LEAGUE_TIMEZONE;
           match.seasonId = revision.proposedMatchSnapshot.seasonId ?? null;
           match.participantCount = revision.proposedMatchSnapshot.participantCount;
           match.currentRevision += 1;
@@ -590,6 +632,7 @@ export function createMatchRevisionService({
           const correctedMatch = await MatchModel.findById(matchId)
             .select({
               matchDate: 1,
+              leagueDate: 1,
             })
             .lean();
 
@@ -597,7 +640,9 @@ export function createMatchRevisionService({
             status: "completed",
             ...(await rivalryUpdater.refreshAfterMatch({
               matchDate: correctedMatch?.matchDate ?? new Date(),
+              leagueDate: correctedMatch?.leagueDate ?? null,
               previousMatchDate,
+              previousLeagueDate,
             })),
           };
         } catch {
@@ -618,14 +663,16 @@ export function createMatchRevisionService({
           const correctedMatch = await MatchModel.findById(matchId)
             .select({
               matchDate: 1,
+              leagueDate: 1,
             })
             .lean();
 
           const result = await challengeEvaluator.evaluatePlayerIds(affectedPlayerIds, {
             actor,
-            dates: [correctedMatch?.matchDate ?? new Date(), previousMatchDate].filter(
-              Boolean,
-            ),
+            dates: [
+              correctedMatch?.leagueDate ?? correctedMatch?.matchDate ?? new Date(),
+              previousLeagueDate ?? previousMatchDate,
+            ].filter(Boolean),
             reason: `Re-evaluate challenges after approved correction for match ${matchId}.`,
             requestMeta,
           });

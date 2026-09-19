@@ -1,6 +1,7 @@
 import { paginationQuerySchema } from "@mini-militia/shared";
 import { z } from "zod";
 import { MATCH_STATUSES } from "../constants/domain.constants.js";
+import { leagueDateSchema } from "./league-date.validation.js";
 
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, "A valid MongoDB ID is required.");
 const dateTime = z
@@ -18,15 +19,19 @@ const integerField = z
 export const uploadMatchSchema = z.object({
   body: z
     .object({
-      matchDate: dateTime,
-      timezone,
+      leagueDate: leagueDateSchema.optional(),
+      matchDate: dateTime.optional(),
+      timezone: timezone.optional(),
       participantCount: integerField.pipe(z.number().min(2).max(50)),
       seasonId: z
         .union([objectId, z.literal("")])
         .optional()
         .transform((value) => value || undefined),
     })
-    .strict(),
+    .strict()
+    .refine((value) => value.leagueDate !== undefined || value.matchDate !== undefined, {
+      message: "A match date is required.",
+    }),
   params: z.object({}).strict(),
   query: z.object({}).strict(),
 });
@@ -44,22 +49,13 @@ export const listMatchesSchema = z.object({
       status: z.enum(MATCH_STATUSES).optional(),
       search: z.string().trim().max(80).optional(),
       seasonId: objectId.optional(),
-      sortBy: z.enum(["matchDate", "createdAt"]).default("matchDate"),
+      sortBy: z
+        .enum(["leagueDate", "matchDate", "createdAt"])
+        .default("leagueDate"),
       sortOrder: z.enum(["asc", "desc"]).default("desc"),
-      dateFrom: z
-        .string()
-        .optional()
-        .refine(
-          (value) => value === undefined || !Number.isNaN(Date.parse(value)),
-          "Invalid dateFrom.",
-        ),
-      dateTo: z
-        .string()
-        .optional()
-        .refine(
-          (value) => value === undefined || !Number.isNaN(Date.parse(value)),
-          "Invalid dateTo.",
-        ),
+      leagueDate: leagueDateSchema.optional(),
+      dateFrom: leagueDateSchema.optional(),
+      dateTo: leagueDateSchema.optional(),
     })
     .strict(),
 });
@@ -90,8 +86,9 @@ const reviewedRow = z
 export const reviewMatchSchema = z.object({
   body: z
     .object({
-      matchDate: dateTime,
-      timezone,
+      leagueDate: leagueDateSchema.optional(),
+      matchDate: dateTime.optional(),
+      timezone: timezone.optional(),
       participantCount: z.number().int().min(2).max(50),
       seasonId: z
         .union([objectId, z.literal(""), z.null()])
@@ -100,7 +97,10 @@ export const reviewMatchSchema = z.object({
       rows: z.array(reviewedRow).min(2).max(50),
       reason: z.string().trim().min(3).max(1000),
     })
-    .strict(),
+    .strict()
+    .refine((value) => value.leagueDate !== undefined || value.matchDate !== undefined, {
+      message: "A match date is required.",
+    }),
   params: z.object({ matchId: objectId }).strict(),
   query: z.object({}).strict(),
 });

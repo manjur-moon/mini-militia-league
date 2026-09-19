@@ -1,3 +1,4 @@
+import { env } from "../config/env.js";
 import { AuditLog } from "../models/audit-log.model.js";
 import { MatchResult } from "../models/match-result.model.js";
 import { Match } from "../models/match.model.js";
@@ -5,6 +6,12 @@ import { normalizeText } from "../models/model.helpers.js";
 import { Player } from "../models/player.model.js";
 import { AppError } from "../utils/app-error.js";
 import { assignDenseKillPlacements } from "../utils/dense-kill-ranking.js";
+import {
+  assertLeagueDateNotFuture,
+  leagueDateToCanonicalInstant,
+  resolveLegacyLeagueDate,
+  resolveRequestedLeagueDate,
+} from "../utils/league-date.js";
 import { seasonService } from "./season.service.js";
 
 function notFound() {
@@ -183,14 +190,32 @@ export function createMatchManagementService({
 
       const previousValue = {
         matchDate: match.matchDate,
+        leagueDate: match.leagueDate ?? null,
         timezone: match.timezone,
         seasonId: match.seasonId,
         participantCount: match.participantCount,
         duplicateReviewNote: match.duplicateReviewNote,
       };
 
-      const nextMatchDate =
-        input.matchDate !== undefined ? new Date(input.matchDate) : match.matchDate;
+      const dateWasProvided =
+        input.leagueDate !== undefined || input.matchDate !== undefined;
+
+      const currentLeagueDate =
+        match.leagueDate ??
+        resolveLegacyLeagueDate(
+          match.matchDate,
+          match.timezone ?? env.LEAGUE_TIMEZONE,
+        );
+
+      const nextLeagueDate = dateWasProvided
+        ? resolveRequestedLeagueDate(input, env.LEAGUE_TIMEZONE)
+        : currentLeagueDate;
+
+      assertLeagueDateNotFuture(nextLeagueDate, env.LEAGUE_TIMEZONE);
+
+      const nextMatchDate = dateWasProvided
+        ? leagueDateToCanonicalInstant(nextLeagueDate, env.LEAGUE_TIMEZONE)
+        : match.matchDate;
 
       const requestedSeasonId =
         input.seasonId !== undefined ? input.seasonId || null : match.seasonId;
@@ -201,11 +226,11 @@ export function createMatchManagementService({
       });
 
       match.matchDate = nextMatchDate;
-
-      if (input.timezone !== undefined) {
-        match.timezone = input.timezone;
-      }
-
+      match.leagueDate = nextLeagueDate;
+      match.leagueDateSource = dateWasProvided
+        ? "explicit"
+        : match.leagueDateSource ?? "legacy_7am";
+      match.timezone = env.LEAGUE_TIMEZONE;
       match.seasonId = assignedSeason?._id ?? null;
 
       if (input.participantCount !== undefined) {
@@ -241,6 +266,7 @@ export function createMatchManagementService({
         previousValue,
         newValue: {
           matchDate: match.matchDate,
+          leagueDate: match.leagueDate,
           timezone: match.timezone,
           seasonId: match.seasonId,
           participantCount: match.participantCount,

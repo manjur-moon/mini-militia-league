@@ -54,6 +54,18 @@ const matchSchema = new mongoose.Schema(
       mimeType: { type: String, required: true, trim: true },
     },
     matchDate: { type: Date, required: true, index: true },
+    leagueDate: {
+      type: String,
+      trim: true,
+      match: /^\d{4}-\d{2}-\d{2}$/,
+      default: null,
+      index: true,
+    },
+    leagueDateSource: {
+      type: String,
+      enum: ["legacy_7am", "explicit"],
+      default: null,
+    },
     timezone: { type: String, required: true, trim: true },
     seasonId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -92,6 +104,9 @@ const matchSchema = new mongoose.Schema(
 matchSchema.index({ status: 1, createdAt: -1 });
 matchSchema.index({ status: 1, matchDate: -1 });
 matchSchema.index({ seasonId: 1, matchDate: -1, status: 1 });
+matchSchema.index({ status: 1, leagueDate: -1 });
+matchSchema.index({ seasonId: 1, leagueDate: -1, status: 1 });
+matchSchema.index({ leagueDate: -1, createdAt: -1 });
 matchSchema.index(
   { "screenshot.sha256": 1 },
   {

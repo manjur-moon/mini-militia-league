@@ -7,6 +7,7 @@ import { PlayerRating } from "../models/player-rating.model.js";
 import { Player } from "../models/player.model.js";
 import { AppError } from "../utils/app-error.js";
 import { analyticsService } from "./analytics.service.js";
+import { leagueDateRangeForPeriod } from "./period.service.js";
 import { ratingConfigService } from "./rating-config.service.js";
 import {
   RATING_CALCULATION_VERSION,
@@ -109,13 +110,24 @@ export function createRatingService({
   async function fetchVerifiedRows(period) {
     const filter = {
       status: "verified",
-      officialMatchDate: { $gte: period.startAt, $lt: period.endAt },
     };
-    if (period.seasonId) filter.officialSeasonId = period.seasonId;
+
+    if (period.type === "season" && period.seasonId) {
+      filter.officialSeasonId = period.seasonId;
+    } else {
+      const leagueDateRange = leagueDateRangeForPeriod(period);
+      if (leagueDateRange) filter.officialLeagueDate = leagueDateRange;
+    }
 
     const results = await MatchResultModel.find(filter)
-      .select({ matchId: 1, official: 1, officialMatchDate: 1, updatedAt: 1 })
-      .sort({ officialMatchDate: 1, matchId: 1, rowIndex: 1 })
+      .select({
+        matchId: 1,
+        official: 1,
+        officialMatchDate: 1,
+        officialLeagueDate: 1,
+        updatedAt: 1,
+      })
+      .sort({ officialLeagueDate: 1, officialMatchDate: 1, matchId: 1, rowIndex: 1 })
       .lean();
     if (!results.length) return [];
 
@@ -138,6 +150,7 @@ export function createRatingService({
         playerId: String(result.official.playerId),
         playerName: result.official.playerName,
         matchDate: result.officialMatchDate,
+        leagueDate: result.officialLeagueDate,
         kills: result.official.kills,
         deaths: result.official.deaths,
         placement: result.official.placement,
@@ -178,6 +191,7 @@ export function createRatingService({
         matchId: row.matchId,
         playerId: row.playerId,
         matchDate: row.matchDate,
+        leagueDate: row.leagueDate,
         kills: row.kills,
         deaths: row.deaths,
         placement: row.placement,

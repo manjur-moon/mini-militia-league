@@ -98,18 +98,6 @@ function formatValue(metric, value) {
   return Number(value ?? 0).toLocaleString();
 }
 
-function formatStartHour(hour) {
-  const parsedHour = Number(hour);
-
-  const normalizedHour = Number.isInteger(parsedHour) ? parsedHour : 7;
-
-  const hourInTwelveHourFormat = normalizedHour % 12 || 12;
-
-  const meridiem = normalizedHour < 12 ? "AM" : "PM";
-
-  return `${hourInTwelveHourFormat}:00 ${meridiem}`;
-}
-
 function RankIcon({ rank }) {
   const emoji = rank === 1 ? "👑" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : "🏆";
 
@@ -148,7 +136,7 @@ function PlayerAvatar({ player }) {
   );
 }
 
-function DailyLeaderboardInfo({ startHourLabel, isVisible, onToggle }) {
+function DailyLeaderboardInfo({ isVisible, onToggle }) {
   if (!isVisible) {
     return (
       <div className="flex justify-end md:col-span-3">
@@ -177,13 +165,11 @@ function DailyLeaderboardInfo({ startHourLabel, isVisible, onToggle }) {
             <CalendarDays size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
 
             <div className="min-w-0">
-              <p className="font-semibold">
-                League day: {startHourLabel} to the next {startHourLabel}
-              </p>
+              <p className="font-semibold">League day: one calendar date</p>
 
               <p className="mt-1 leading-6">
-                Matches before {startHourLabel} belong to the previous league day. Daily
-                rankings require at least one verified match.
+                Daily rankings use the selected match date in the league timezone, from
+                local midnight to the next midnight. Upload time does not change the match date.
               </p>
             </div>
           </div>
@@ -473,10 +459,6 @@ export function LeaderboardsPage() {
 
   const periodMeta = query.data?.meta?.period;
 
-  const leagueDayStartHour = periodMeta?.dayStartHour ?? 7;
-
-  const leagueDayStartLabel = formatStartHour(leagueDayStartHour);
-
   const dateDisabled = periodType === "all_time";
 
   function handlePeriodChange(event) {
@@ -568,7 +550,6 @@ export function LeaderboardsPage() {
         <div className="hidden" aria-hidden="true">
           {periodType === "daily" ? (
             <DailyLeaderboardInfo
-              startHourLabel={leagueDayStartLabel}
               isVisible={isDailyInfoVisible}
               onToggle={toggleDailyInfo}
             />
@@ -826,7 +807,7 @@ export function LeaderboardsPage() {
           title="No eligible players"
           description={
             periodType === "daily"
-              ? "No verified matches were found for this 7:00 AM to 7:00 AM league day."
+              ? "No verified matches were found for this calendar date."
               : "No player currently satisfies the minimum verified-match requirement for this leaderboard."
           }
         />

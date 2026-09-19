@@ -19,6 +19,12 @@ import { LoadingState } from "@/components/ui/loading-state.jsx";
 import { PageHeader } from "@/components/ui/page-header.jsx";
 import { authClient } from "@/lib/auth-client.js";
 import {
+  formatLeagueDate,
+  getLeagueToday,
+  isLeagueDate,
+  resolveMatchLeagueDate,
+} from "@/lib/league-date.js";
+import {
   assignDenseKillPlacements,
   validateMatchReviewRows,
 } from "@/lib/dense-kill-ranking.js";
@@ -82,6 +88,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
   const isAdmin = session.data?.user?.role === "admin";
 
   const [rows, setRows] = useState([]);
+  const [leagueDate, setLeagueDate] = useState("");
   const [correctionMode, setCorrectionMode] = useState(false);
 
   const [reason, setReason] = useState(
@@ -161,6 +168,14 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
       setRows(toEditableRows(detail.results));
     }
   }, [detail?.results]);
+
+  useEffect(() => {
+    const nextLeagueDate = resolveMatchLeagueDate(detail?.match);
+
+    if (nextLeagueDate) {
+      setLeagueDate(nextLeagueDate);
+    }
+  }, [detail?.match?.id, detail?.match?.leagueDate, detail?.match?.matchDate]);
 
   const players = playersQuery.data?.data ?? [];
 
@@ -291,13 +306,18 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
       return;
     }
 
+    if (!isLeagueDate(leagueDate)) {
+      toast.error("Select a valid match date.");
+
+      return;
+    }
+
     mutation.mutate({
       type: "review",
 
       payload: {
         matchId,
-        matchDate: detail.match.matchDate,
-        timezone: detail.match.timezone,
+        leagueDate,
         participantCount: rankedRows.length,
         reason,
 
@@ -362,6 +382,12 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
       return;
     }
 
+    if (!isLeagueDate(leagueDate)) {
+      toast.error("Select a valid match date.");
+
+      return;
+    }
+
     mutation.mutate({
       type: "correction",
 
@@ -372,9 +398,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
         expectedRevision: detail.match.currentRevision,
 
         matchChanges: {
-          matchDate: detail.match.matchDate,
-
-          timezone: detail.match.timezone,
+          leagueDate,
 
           participantCount: rankedRows.length,
 
@@ -390,6 +414,8 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
     setCorrectionMode(false);
 
     setRows(toEditableRows(detail?.results ?? []));
+
+    setLeagueDate(resolveMatchLeagueDate(detail?.match) ?? "");
 
     setReason("Admin correction required for verified match data");
   }
@@ -458,6 +484,23 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
 
           <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="grid gap-2">
+              <div>
+                <strong>Match date:</strong>{" "}
+                {editable ? (
+                  <input
+                    className={`${inputClass} mt-2`}
+                    type="date"
+                    value={leagueDate}
+                    max={getLeagueToday()}
+                    disabled={isOcrScanning}
+                    onChange={(event) => setLeagueDate(event.target.value)}
+                    aria-label="Match date"
+                  />
+                ) : (
+                  formatLeagueDate(resolveMatchLeagueDate(detail.match))
+                )}
+              </div>
+
               <p>
                 <strong>Match status:</strong>{" "}
                 {detail.match.status.replaceAll("_", " ")}
@@ -752,6 +795,8 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
                   type="button"
                   onClick={() => {
                     setCorrectionMode(true);
+
+                    setLeagueDate(resolveMatchLeagueDate(detail?.match) ?? "");
 
                     setReason("Admin correction required for verified match data");
                   }}

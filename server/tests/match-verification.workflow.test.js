@@ -44,7 +44,10 @@ function createFixture({
     status,
     participantCount: 2,
     resultCount: 2,
-    matchDate: new Date("2026-07-20T12:00:00.000Z"),
+    matchDate: new Date("2026-07-20T06:00:00.000Z"),
+    leagueDate: "2026-07-20",
+    leagueDateSource: "explicit",
+    timezone: "Asia/Dhaka",
     seasonId: null,
     verification: {},
     currentRevision: 0,
@@ -188,6 +191,9 @@ describe("verified match critical workflow", () => {
     expect(operations[0].updateOne.update.$set.status).toBe("verified");
 
     expect(operations[0].updateOne.update.$set["corrected.placement"]).toBe(1);
+    expect(operations[0].updateOne.update.$set.officialLeagueDate).toBe(
+      "2026-07-20",
+    );
 
     expect(operations[0].updateOne.update.$set.official).toMatchObject({
       playerName: "Player 1",

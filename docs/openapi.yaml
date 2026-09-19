@@ -1736,7 +1736,7 @@ paths:
       description: "Access: Moderator, Admin
 
 
-        Validation: Image signature JPEG/PNG/WebP; <=10MB; matchDate ISO; participantCount 2–50; SHA-256 duplicate check.
+        Validation: Image signature JPEG/PNG/WebP; <=10MB; leagueDate YYYY-MM-DD (not future); participantCount 2–50; SHA-256 duplicate check.
 
 
         Security notes: CSRF token; idempotency key; upload rate limit; original preserved; never trust filename/MIME alone."
@@ -1792,7 +1792,7 @@ paths:
           multipart/form-data:
             schema:
               type: object
-              description: "multipart: screenshot, matchDate, timezone?, participantCount, seasonId?"
+              description: "multipart: screenshot, leagueDate (YYYY-MM-DD), participantCount, seasonId?"
               additionalProperties: true
   /api/v1/ocr-jobs/{jobId}:
     get:
@@ -2072,7 +2072,7 @@ paths:
             schema:
               type: object
               description:
-                matchDate?:datetime, timezone?:IANA, seasonId?:ObjectId|null, participantCount?:integer, duplicateReviewNote?:string,
+                leagueDate?:YYYY-MM-DD, seasonId?:ObjectId|null, participantCount?:integer, duplicateReviewNote?:string,
                 expectedUpdatedAt?:datetime
               additionalProperties: true
   /api/v1/matches/{matchId}/results:
@@ -2710,8 +2710,8 @@ paths:
             type: string
           description: >-
             periodType?:daily|weekly|monthly|season|all_time, seasonId?, date?;
-            daily periods use the configured league timezone and run from
-            LEAGUE_DAY_START_HOUR to the same hour on the following day.
+            daily periods use the configured league timezone and cover one
+            calendar date from local midnight to the next local midnight.
       responses:
         "200":
           description: 200 — totals, averages, records and source metadata.
@@ -2790,7 +2790,7 @@ paths:
 
 
         Validation: Metric/period compatibility; daily date normalized in the league timezone;
-        daily boundary uses the configured rollover hour; daily minimum is one verified match;
+        daily boundaries use local calendar dates in the configured league timezone; daily minimum is one verified match;
         limit<=100.
 
 
@@ -2805,13 +2805,13 @@ paths:
           description: >-
             periodType:daily|weekly|monthly|season|all_time,
             metric:overall|kills|deaths|kdr|activity|first_places|last_places|win_rate|average_rank,
-            date?:YYYY-MM-DD, seasonId?, page, limit. Daily periods run from the
-            configured LEAGUE_DAY_START_HOUR to the same hour on the following day;
+            date?:YYYY-MM-DD, seasonId?, page, limit. Daily periods cover the
+            selected league-local calendar date from midnight to the next midnight;
             the end boundary is exclusive and daily eligibility requires one verified match.
       responses:
         "200":
           description: >-
-            200 — ranked entries, period metadata, timezone, daily rollover hour,
+            200 — ranked entries, period metadata, timezone, calendar-day boundary,
             minimum-match rules, deterministic tie-break rules, formula/source version
             and pagination.
           content:
