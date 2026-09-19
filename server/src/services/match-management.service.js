@@ -202,10 +202,7 @@ export function createMatchManagementService({
 
       const currentLeagueDate =
         match.leagueDate ??
-        resolveLegacyLeagueDate(
-          match.matchDate,
-          match.timezone ?? env.LEAGUE_TIMEZONE,
-        );
+        resolveLegacyLeagueDate(match.matchDate, match.timezone ?? env.LEAGUE_TIMEZONE);
 
       const nextLeagueDate = dateWasProvided
         ? resolveRequestedLeagueDate(input, env.LEAGUE_TIMEZONE)
@@ -229,7 +226,7 @@ export function createMatchManagementService({
       match.leagueDate = nextLeagueDate;
       match.leagueDateSource = dateWasProvided
         ? "explicit"
-        : match.leagueDateSource ?? "legacy_7am";
+        : (match.leagueDateSource ?? "legacy_7am");
       match.timezone = env.LEAGUE_TIMEZONE;
       match.seasonId = assignedSeason?._id ?? null;
 

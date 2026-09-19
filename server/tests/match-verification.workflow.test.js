@@ -191,9 +191,7 @@ describe("verified match critical workflow", () => {
     expect(operations[0].updateOne.update.$set.status).toBe("verified");
 
     expect(operations[0].updateOne.update.$set["corrected.placement"]).toBe(1);
-    expect(operations[0].updateOne.update.$set.officialLeagueDate).toBe(
-      "2026-07-20",
-    );
+    expect(operations[0].updateOne.update.$set.officialLeagueDate).toBe("2026-07-20");
 
     expect(operations[0].updateOne.update.$set.official).toMatchObject({
       playerName: "Player 1",

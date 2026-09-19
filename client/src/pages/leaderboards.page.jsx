@@ -169,7 +169,8 @@ function DailyLeaderboardInfo({ isVisible, onToggle }) {
 
               <p className="mt-1 leading-6">
                 Daily rankings use the selected match date in the league timezone, from
-                local midnight to the next midnight. Upload time does not change the match date.
+                local midnight to the next midnight. Upload time does not change the
+                match date.
               </p>
             </div>
           </div>

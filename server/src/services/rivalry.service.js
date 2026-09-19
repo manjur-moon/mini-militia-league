@@ -412,7 +412,13 @@ export function createRivalryService({
       _id: { $in: pageItems.map((item) => item.matchId) },
       status: "verified",
     })
-      .select({ matchCode: 1, screenshot: 1, matchDate: 1, leagueDate: 1, participantCount: 1 })
+      .select({
+        matchCode: 1,
+        screenshot: 1,
+        matchDate: 1,
+        leagueDate: 1,
+        participantCount: 1,
+      })
       .lean();
     const matchById = new Map(matches.map((match) => [String(match._id), match]));
     return {

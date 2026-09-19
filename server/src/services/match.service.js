@@ -119,10 +119,7 @@ export function createMatchService({
         });
       }
 
-      const leagueDate = resolveRequestedLeagueDate(
-        input,
-        env.LEAGUE_TIMEZONE,
-      );
+      const leagueDate = resolveRequestedLeagueDate(input, env.LEAGUE_TIMEZONE);
 
       assertLeagueDateNotFuture(leagueDate, env.LEAGUE_TIMEZONE);
 
@@ -549,10 +546,7 @@ export function createMatchService({
         }
       }
 
-      const leagueDate = resolveRequestedLeagueDate(
-        input,
-        env.LEAGUE_TIMEZONE,
-      );
+      const leagueDate = resolveRequestedLeagueDate(input, env.LEAGUE_TIMEZONE);
 
       assertLeagueDateNotFuture(leagueDate, env.LEAGUE_TIMEZONE);
 

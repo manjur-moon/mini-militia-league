@@ -1014,7 +1014,8 @@ export function createAnalyticsService({
       (row) =>
         (row.leagueDate
           ? DateTime.fromISO(row.leagueDate, { zone: settings.timezone })
-          : DateTime.fromJSDate(row.matchDate).setZone(settings.timezone)) >= currentStart,
+          : DateTime.fromJSDate(row.matchDate).setZone(settings.timezone)) >=
+        currentStart,
     );
     const previousRows = scored.filter((row) => {
       const value = row.leagueDate

@@ -106,8 +106,7 @@ export function ModeratorDashboardPage() {
                   <div>
                     <p className="font-black">{match.matchCode}</p>
                     <p className="text-xs text-slate-500">
-                      {match.participantCount} players ·{" "}
-                      {formatMatchLeagueDate(match)}
+                      {match.participantCount} players · {formatMatchLeagueDate(match)}
                     </p>
                   </div>
                   <span className="font-bold text-amber-700 dark:text-amber-300">

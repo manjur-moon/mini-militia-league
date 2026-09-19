@@ -96,10 +96,7 @@ export function resolveRequestedLeagueDate(input, timezone = env.LEAGUE_TIMEZONE
   });
 }
 
-export function assertLeagueDateNotFuture(
-  leagueDate,
-  timezone = env.LEAGUE_TIMEZONE,
-) {
+export function assertLeagueDateNotFuture(leagueDate, timezone = env.LEAGUE_TIMEZONE) {
   assertValidLeagueDate(leagueDate, timezone);
 
   const selected = DateTime.fromISO(leagueDate, {

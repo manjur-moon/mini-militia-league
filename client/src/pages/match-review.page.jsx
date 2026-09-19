@@ -175,7 +175,7 @@ export function MatchReviewPage({ archivePath = "/moderator/archive" }) {
     if (nextLeagueDate) {
       setLeagueDate(nextLeagueDate);
     }
-  }, [detail?.match?.id, detail?.match?.leagueDate, detail?.match?.matchDate]);
+  }, [detail?.match]);
 
   const players = playersQuery.data?.data ?? [];
 

@@ -85,10 +85,7 @@ function serializePeriod({
  * Upload time no longer changes the business date. A daily period always
  * starts at local midnight and ends at the next local midnight.
  */
-export function resolveDailyPeriod({
-  date,
-  timezone = env.LEAGUE_TIMEZONE,
-} = {}) {
+export function resolveDailyPeriod({ date, timezone = env.LEAGUE_TIMEZONE } = {}) {
   assertTimezone(timezone);
 
   const start = toDateTime(date, timezone).startOf("day");
@@ -265,10 +262,7 @@ export function periodContains(period, date) {
   return instant >= period.startAt.getTime() && instant < period.endAt.getTime();
 }
 
-export function formatLeagueDateKey(
-  date,
-  timezone = env.LEAGUE_TIMEZONE,
-) {
+export function formatLeagueDateKey(date, timezone = env.LEAGUE_TIMEZONE) {
   assertTimezone(timezone);
 
   const value = DateTime.fromJSDate(new Date(date), {

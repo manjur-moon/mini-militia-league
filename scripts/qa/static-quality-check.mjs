@@ -128,11 +128,12 @@ record(
   /!env\.isProduction\s*&&\s*normalizedError\.statusCode\s*===\s*500/.test(errorSource),
 );
 
-
 const periodSource = await text("server/src/services/period.service.js");
 record(
   "Daily periods use league-local midnight",
-  /resolveDailyPeriod[\s\S]*startOf\("day"\)[\s\S]*dayStartHour:\s*0/.test(periodSource),
+  /resolveDailyPeriod[\s\S]*startOf\("day"\)[\s\S]*dayStartHour:\s*0/.test(
+    periodSource,
+  ),
 );
 
 const leagueDateSource = await text("server/src/utils/league-date.js");

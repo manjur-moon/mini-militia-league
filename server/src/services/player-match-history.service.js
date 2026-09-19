@@ -4,10 +4,7 @@ import { Match } from "../models/match.model.js";
 import { Player } from "../models/player.model.js";
 import { env } from "../config/env.js";
 import { AppError } from "../utils/app-error.js";
-import {
-  isValidLeagueDate,
-  leagueDateFromTimestamp,
-} from "../utils/league-date.js";
+import { isValidLeagueDate, leagueDateFromTimestamp } from "../utils/league-date.js";
 import { calculateKdr } from "./statistics.service.js";
 
 function playerNotFound() {
@@ -77,7 +74,11 @@ export function createPlayerMatchHistoryService({
             officialLeagueDate: 1,
             officialSeasonId: 1,
           })
-          .sort({ officialLeagueDate: direction, officialMatchDate: direction, _id: direction })
+          .sort({
+            officialLeagueDate: direction,
+            officialMatchDate: direction,
+            _id: direction,
+          })
           .skip(skip)
           .limit(query.limit)
           .lean(),

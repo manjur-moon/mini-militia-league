@@ -29,9 +29,12 @@ export const uploadMatchSchema = z.object({
         .transform((value) => value || undefined),
     })
     .strict()
-    .refine((value) => value.leagueDate !== undefined || value.matchDate !== undefined, {
-      message: "A match date is required.",
-    }),
+    .refine(
+      (value) => value.leagueDate !== undefined || value.matchDate !== undefined,
+      {
+        message: "A match date is required.",
+      },
+    ),
   params: z.object({}).strict(),
   query: z.object({}).strict(),
 });
@@ -49,9 +52,7 @@ export const listMatchesSchema = z.object({
       status: z.enum(MATCH_STATUSES).optional(),
       search: z.string().trim().max(80).optional(),
       seasonId: objectId.optional(),
-      sortBy: z
-        .enum(["leagueDate", "matchDate", "createdAt"])
-        .default("leagueDate"),
+      sortBy: z.enum(["leagueDate", "matchDate", "createdAt"]).default("leagueDate"),
       sortOrder: z.enum(["asc", "desc"]).default("desc"),
       leagueDate: leagueDateSchema.optional(),
       dateFrom: leagueDateSchema.optional(),
@@ -98,9 +99,12 @@ export const reviewMatchSchema = z.object({
       reason: z.string().trim().min(3).max(1000),
     })
     .strict()
-    .refine((value) => value.leagueDate !== undefined || value.matchDate !== undefined, {
-      message: "A match date is required.",
-    }),
+    .refine(
+      (value) => value.leagueDate !== undefined || value.matchDate !== undefined,
+      {
+        message: "A match date is required.",
+      },
+    ),
   params: z.object({ matchId: objectId }).strict(),
   query: z.object({}).strict(),
 });

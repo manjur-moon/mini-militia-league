@@ -23,9 +23,7 @@ describe("league-date utilities", () => {
   });
 
   it("formats a date-only value without timezone shifting", () => {
-    expect(formatLeagueDate("2026-09-15", { locale: "en-US" })).toBe(
-      "Sep 15, 2026",
-    );
+    expect(formatLeagueDate("2026-09-15", { locale: "en-US" })).toBe("Sep 15, 2026");
   });
 
   it("prefers the explicit league date on a match", () => {

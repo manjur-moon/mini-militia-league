@@ -57,10 +57,7 @@ async function backfillMatches() {
 async function backfillVerifiedResults() {
   const missingFilter = {
     status: "verified",
-    $or: [
-      { officialLeagueDate: null },
-      { officialLeagueDate: { $exists: false } },
-    ],
+    $or: [{ officialLeagueDate: null }, { officialLeagueDate: { $exists: false } }],
   };
 
   const matchIds = await MatchResult.distinct("matchId", missingFilter);
@@ -117,10 +114,7 @@ async function validateMigration() {
     }),
     MatchResult.countDocuments({
       status: "verified",
-      $or: [
-        { officialLeagueDate: null },
-        { officialLeagueDate: { $exists: false } },
-      ],
+      $or: [{ officialLeagueDate: null }, { officialLeagueDate: { $exists: false } }],
     }),
     MatchResult.aggregate([
       { $match: { status: "verified" } },

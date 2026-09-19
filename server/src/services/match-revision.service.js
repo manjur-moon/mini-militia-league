@@ -293,10 +293,7 @@ export function createMatchRevisionService({
 
       const currentLeagueDate =
         match.leagueDate ??
-        resolveLegacyLeagueDate(
-          match.matchDate,
-          match.timezone ?? env.LEAGUE_TIMEZONE,
-        );
+        resolveLegacyLeagueDate(match.matchDate, match.timezone ?? env.LEAGUE_TIMEZONE);
 
       const proposedLeagueDate = dateWasProvided
         ? resolveRequestedLeagueDate(input.matchChanges, env.LEAGUE_TIMEZONE)
@@ -324,7 +321,7 @@ export function createMatchRevisionService({
         leagueDate: proposedLeagueDate,
         leagueDateSource: dateWasProvided
           ? "explicit"
-          : match.leagueDateSource ?? "legacy_7am",
+          : (match.leagueDateSource ?? "legacy_7am"),
         timezone: env.LEAGUE_TIMEZONE,
         seasonId: assignedSeason?._id ?? null,
         participantCount,
